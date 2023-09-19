@@ -1,3 +1,9 @@
+gnome-console (45.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Tue, 19 Sep 2023 11:51:34 -0400
+
 gnome-console (45~beta-2) unstable; urgency=medium
 
   * Cherry-pick patch to fix Open/Copy Link showing too often
