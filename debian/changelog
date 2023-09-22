@@ -1,8 +1,10 @@
-gnome-console (45.0-1) UNRELEASED; urgency=medium
+gnome-console (45.0-1) unstable; urgency=medium
 
   * New upstream release
+  * debian/control.in: Bump minimum GTK4 to 4.12.2
+  * Drop 2 patches applied in new release
 
- -- Jeremy Bícha <jbicha@ubuntu.com>  Tue, 19 Sep 2023 11:51:34 -0400
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 22 Sep 2023 10:37:11 -0400
 
 gnome-console (45~beta-2) unstable; urgency=medium
 
