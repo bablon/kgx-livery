@@ -45,6 +45,8 @@ struct _KgxWindowPrivate {
   KgxSettings          *settings;
   GBindingGroup        *settings_binds;
 
+  KgxWatcher           *watcher;
+
   gboolean              search_enabled;
 
   gboolean              close_anyway;
@@ -63,6 +65,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (KgxWindow, kgx_window, ADW_TYPE_APPLICATION_WINDOW)
 enum {
   PROP_0,
   PROP_SETTINGS,
+  PROP_WATCHER,
   PROP_SEARCH_MODE_ENABLED,
   LAST_PROP
 };
@@ -76,6 +79,7 @@ kgx_window_dispose (GObject *object)
   KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
 
   g_clear_object (&priv->settings);
+  g_clear_object (&priv->watcher);
 
   G_OBJECT_CLASS (kgx_window_parent_class)->dispose (object);
 }
@@ -93,6 +97,9 @@ kgx_window_set_property (GObject      *object,
   switch (property_id) {
     case PROP_SETTINGS:
       g_set_object (&priv->settings, g_value_get_object (value));
+      break;
+    case PROP_WATCHER:
+      g_set_object (&priv->watcher, g_value_get_object (value));
       break;
     case PROP_SEARCH_MODE_ENABLED:
       priv->search_enabled = g_value_get_boolean (value);
@@ -117,6 +124,9 @@ kgx_window_get_property (GObject    *object,
     case PROP_SETTINGS:
       g_value_set_object (value, priv->settings);
       break;
+    case PROP_WATCHER:
+      g_value_set_object (value, priv->watcher);
+      break;
     case PROP_SEARCH_MODE_ENABLED:
       g_value_set_boolean (value, priv->search_enabled);
       break;
@@ -128,13 +138,27 @@ kgx_window_get_property (GObject    *object,
 
 
 static void
-close_response (KgxWindow *self)
+got_close (GObject      *source,
+           GAsyncResult *res,
+           gpointer      user_data)
 {
+  g_autoptr (KgxCloseDialog) dialogue = KGX_CLOSE_DIALOG (source);
+  g_autoptr (KgxWindow) self = user_data;
+  g_autoptr (GError) error = NULL;
   KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
+  KgxCloseDialogResult result;
 
-  priv->close_anyway = TRUE;
+  result = kgx_close_dialog_run_finish (dialogue, res, &error);
 
-  gtk_window_destroy (GTK_WINDOW (self));
+  if (G_UNLIKELY (error)) {
+    g_critical ("Unexpected: %s", error->message);
+    return;
+  }
+
+  if (result == KGX_CLOSE_ANYWAY) {
+    priv->close_anyway = TRUE;
+    gtk_window_close (GTK_WINDOW (self));
+  }
 }
 
 
@@ -143,28 +167,29 @@ kgx_window_close_request (GtkWindow *window)
 {
   KgxWindow *self = KGX_WINDOW (window);
   KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
-  GtkWidget *dlg;
   g_autoptr (GPtrArray) children = NULL;
+  KgxCloseDialog *dlg;
 
   children = kgx_pages_get_children (KGX_PAGES (priv->pages));
 
   if (children->len < 1 || priv->close_anyway) {
     if (gtk_window_is_active (GTK_WINDOW (self))) {
+      gboolean maximised = gtk_window_is_maximized (GTK_WINDOW (self));
       int width, height;
+
       gtk_window_get_default_size (GTK_WINDOW (self), &width, &height);
-      kgx_settings_set_custom_size (priv->settings, width, height);
+      kgx_settings_set_custom_size (priv->settings, width, height, maximised);
     }
 
     return FALSE; /* Aka no, I don’t want to block closing */
   }
 
-  dlg = kgx_close_dialog_new (KGX_CONTEXT_WINDOW, children);
-
-  gtk_window_set_transient_for (GTK_WINDOW (dlg), GTK_WINDOW (self));
-
-  g_signal_connect_swapped (dlg, "response::close", G_CALLBACK (close_response), self);
-
-  gtk_window_present (GTK_WINDOW (dlg));
+  dlg = g_object_new (KGX_TYPE_CLOSE_DIALOG,
+                      "context", KGX_CONTEXT_WINDOW,
+                      "commands", children,
+                      "transient-for", self,
+                      NULL);
+  kgx_close_dialog_run (dlg, NULL, got_close, g_object_ref (self));
 
   return TRUE; /* Block the close */
 }
@@ -173,10 +198,13 @@ kgx_window_close_request (GtkWindow *window)
 static void
 active_changed (GObject *object, GParamSpec *pspec, gpointer data)
 {
-  if (gtk_window_is_active (GTK_WINDOW (object))) {
-    kgx_watcher_push_active (kgx_watcher_get_default ());
+  KgxWindow *self = KGX_WINDOW (object);
+  KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
+
+  if (gtk_window_is_active (GTK_WINDOW (self))) {
+    kgx_watcher_push_active (priv->watcher);
   } else {
-    kgx_watcher_pop_active (kgx_watcher_get_default ());
+    kgx_watcher_pop_active (priv->watcher);
   }
 }
 
@@ -218,6 +246,7 @@ create_tearoff_host (KgxPages *pages, KgxWindow *self)
   new_window = g_object_new (KGX_TYPE_WINDOW,
                              "application", application,
                              "settings", priv->settings,
+                             "watcher", priv->watcher,
                              "default-width", width,
                              "default-height", height,
                              NULL);
@@ -338,29 +367,57 @@ title_or_fallback (GObject *object, const char *title)
 
 
 static char *
-path_as_subtitle (GObject *object, GFile *file)
+path_as_subtitle (GObject *object, GFile *file, const char *window_title)
 {
-  g_autofree char *path = NULL;
-  const char *home = NULL;
+  g_autoptr (GFile) home = NULL;
+  g_autoptr (GError) error = NULL;
+  g_autofree char *path_raw = NULL;
+  g_autofree char *path_utf8 = NULL;
+  g_autofree char *path_rel_raw = NULL;
+  g_autofree char *path_rel_utf8 = NULL;
+  g_autofree char *short_home = NULL;
+  const char *home_path = NULL;
 
   if (!file) {
     return NULL;
   }
 
-  path = g_file_get_path (file);
-  if (G_UNLIKELY (!path)) {
+  path_raw = g_file_get_path (file);
+  if (G_UNLIKELY (!path_raw || g_strcmp0 (path_raw, window_title) == 0)) {
     return NULL;
   }
 
-  home = g_get_home_dir ();
-  if (G_LIKELY (g_str_has_prefix (path, home))) {
-    g_autofree char *short_home = g_strdup_printf ("~%s",
-                                                   path + strlen (home));
-
-    return g_steal_pointer (&short_home);
+  path_utf8 = g_filename_to_utf8 (path_raw, -1, NULL, NULL, &error);
+  if (G_UNLIKELY (error)) {
+    g_debug ("window: path had unexpected encoding (%s)", error->message);
+    return g_file_get_uri (file);
   }
 
-  return g_steal_pointer (&path);
+  home_path = g_get_home_dir ();
+  if (G_UNLIKELY (!g_str_has_prefix (path_raw, home_path))) {
+    return g_steal_pointer (&path_utf8);
+  }
+
+  home = g_file_new_for_path (home_path);
+  if (!g_file_equal (home, file)) {
+    path_rel_raw = g_file_get_relative_path (home, file);
+    path_rel_utf8 = g_filename_to_utf8 (path_rel_raw, -1, NULL, NULL, &error);
+    if (G_UNLIKELY (error)) {
+      g_debug ("window: path had unexpected encoding (%s)", error->message);
+      return g_file_get_uri (file);
+    }
+
+    short_home = g_strdup_printf ("~/%s", path_rel_utf8);
+  } else {
+    short_home = g_strdup ("~");
+  }
+
+  if (G_LIKELY (g_strcmp0 (short_home, window_title) == 0)) {
+    /* Avoid duplicating the title */
+    return NULL;
+  }
+
+  return g_steal_pointer (&short_home);
 }
 
 
@@ -449,7 +506,7 @@ about_activated  (GtkWidget  *widget,
   g_autofree char *copyright = NULL;
 
   /* Translators: %s is the year range */
-  copyright = g_strdup_printf (_("© %s Zander Brown"), "2019-2023");
+  copyright = g_strdup_printf (_("© %s Zander Brown"), "2019-2024");
 
   adw_show_about_window (GTK_WINDOW (widget),
                          "application-name", KGX_DISPLAY_NAME,
@@ -513,6 +570,11 @@ kgx_window_class_init (KgxWindowClass *klass)
   pspecs[PROP_SETTINGS] =
     g_param_spec_object ("settings", NULL, NULL,
                          KGX_TYPE_SETTINGS,
+                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
+
+  pspecs[PROP_WATCHER] =
+    g_param_spec_object ("watcher", NULL, NULL,
+                         KGX_TYPE_WATCHER,
                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
   pspecs[PROP_SEARCH_MODE_ENABLED] =

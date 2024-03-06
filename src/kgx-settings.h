@@ -1,6 +1,6 @@
 /* kgx-settings.h
  *
- * Copyright 2022 Zander Brown
+ * Copyright 2022-2024 Zander Brown
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ typedef enum /*< enum,prefix=KGX >*/ {
 
 G_DECLARE_FINAL_TYPE (KgxSettings, kgx_settings, KGX, SETTINGS, GObject)
 
+KgxTheme              kgx_settings_get_resolved_theme     (KgxSettings           *self);
 PangoFontDescription *kgx_settings_get_font          (KgxSettings       *self);
 void                  kgx_settings_increase_scale    (KgxSettings       *self);
 void                  kgx_settings_decrease_scale    (KgxSettings       *self);
@@ -81,12 +82,14 @@ void                  kgx_settings_set_custom_shell  (KgxSettings       *self,
 void                  kgx_settings_set_scrollback    (KgxSettings       *self,
                                                       int64_t            value);
 gboolean              kgx_settings_get_restore_size  (KgxSettings       *self);
-void                  kgx_settings_get_size          (KgxSettings       *self,
-                                                      int               *width,
-                                                      int               *height);
-void                  kgx_settings_set_custom_size   (KgxSettings       *self,
-                                                      int                width,
-                                                      int                height);
+void                  kgx_settings_get_size             (KgxSettings       *self,
+                                                         int               *width,
+                                                         int               *height,
+                                                         gboolean          *maximised);
+void                  kgx_settings_set_custom_size      (KgxSettings       *self,
+                                                         int                width,
+                                                         int                height,
+                                                         gboolean           maximised);
 gboolean              kgx_settings_get_audible_bell  (KgxSettings       *self);
 void                  kgx_settings_set_audible_bell  (KgxSettings       *self,
                                                       gboolean           audible_bell);

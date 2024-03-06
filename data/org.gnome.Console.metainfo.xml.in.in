@@ -31,6 +31,46 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="46~rc" date="2024-03-03" type="development">
+      <description>
+        <p>Updated Translations:</p>
+        <ul>
+          <li>Basque</li>
+          <li>Belarusian</li>
+          <li>Brazilian Portuguese</li>
+          <li>British English</li>
+          <li>Bulgarian</li>
+          <li>Catalan</li>
+          <li>Chinese</li>
+          <li>Chinese</li>
+          <li>Czech</li>
+          <li>Dutch</li>
+          <li>Finnish</li>
+          <li>French</li>
+          <li>Friulian</li>
+          <li>Galician</li>
+          <li>Georgian</li>
+          <li>German</li>
+          <li>Greek</li>
+          <li>Hebrew</li>
+          <li>Hungarian</li>
+          <li>Indonesian</li>
+          <li>Kazakh</li>
+          <li>Latvian</li>
+          <li>Lithuanian</li>
+          <li>Norwegian Bokmål</li>
+          <li>Persian</li>
+          <li>Portuguese</li>
+          <li>Romanian</li>
+          <li>Russian</li>
+          <li>Slovenian</li>
+          <li>Spanish</li>
+          <li>Swedish</li>
+          <li>Turkish</li>
+          <li>Ukrainian</li>
+        </ul>
+      </description>
+    </release>
     <release version="45.0" date="2023-09-19" type="stable">
       <description>
         <p>Updated Translations:</p>
@@ -319,8 +359,12 @@
     </release>
   </releases>
   <launchable type="desktop-id">@KGX_APPLICATION_ID_RAW@.desktop</launchable>
-  <url type="homepage">https://apps.gnome.org/en-GB/app/org.gnome.Console/</url>
+  <url type="homepage">https://apps.gnome.org/Console/</url>
   <url type="bugtracker">https://gitlab.gnome.org/GNOME/console/issues</url>
+  <url type="donation">https://www.gnome.org/donate/</url>
+  <url type="translate">https://l10n.gnome.org/module/console/</url>
+  <url type="vcs-browser">https://gitlab.gnome.org/GNOME/console</url>
+  <url type="contribute">https://welcome.gnome.org/app/Console/</url>
   <update_contact>zbrown@gnome.org</update_contact>
   <translation type="gettext">@BIN_NAME@</translation>
   <content_rating type="oars-1.1" />
