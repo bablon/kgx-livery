@@ -43,7 +43,7 @@ https://gitlab.gnome.org/GNOME/console/-/merge_requests/99
  7 files changed, 119 insertions(+), 1 deletion(-)
 
 diff --git a/src/kgx-pages.c b/src/kgx-pages.c
-index c4dd662..2411fa2 100644
+index 98e2b23..150632c 100644
 --- a/src/kgx-pages.c
 +++ b/src/kgx-pages.c
 @@ -24,6 +24,7 @@
@@ -54,7 +54,7 @@ index c4dd662..2411fa2 100644
  #include "kgx-marshals.h"
  
  
-@@ -971,3 +972,23 @@ kgx_pages_get_selected_page (KgxPages  *self)
+@@ -956,3 +957,23 @@ kgx_pages_get_selected_page (KgxPages  *self)
  
    return adw_tab_view_get_selected_page (ADW_TAB_VIEW (priv->view));
  }
@@ -79,10 +79,10 @@ index c4dd662..2411fa2 100644
 +  return kgx_simple_tab_get_current_path (KGX_SIMPLE_TAB (tab));
 +}
 diff --git a/src/kgx-pages.h b/src/kgx-pages.h
-index 05a8afe..4eb5aee 100644
+index 95a6d2a..b5a7c90 100644
 --- a/src/kgx-pages.h
 +++ b/src/kgx-pages.h
-@@ -51,4 +51,6 @@ void        kgx_pages_close_page          (KgxPages  *self);
+@@ -49,4 +49,6 @@ void        kgx_pages_close_page          (KgxPages  *self);
  void        kgx_pages_detach_page         (KgxPages  *self);
  AdwTabPage *kgx_pages_get_selected_page   (KgxPages  *self);
  
@@ -90,7 +90,7 @@ index 05a8afe..4eb5aee 100644
 +
  G_END_DECLS
 diff --git a/src/kgx-simple-tab.c b/src/kgx-simple-tab.c
-index 7252ad2..556c990 100644
+index 1ad318e..c4ce901 100644
 --- a/src/kgx-simple-tab.c
 +++ b/src/kgx-simple-tab.c
 @@ -233,6 +233,7 @@ spawned (VtePty       *pty,
@@ -101,7 +101,7 @@ index 7252ad2..556c990 100644
    g_set_weak_pointer (&wait_data->self, start_data->self);
  
    g_child_watch_add (pid, wait_cb, g_steal_pointer (&wait_data));
-@@ -374,3 +375,15 @@ kgx_simple_tab_init (KgxSimpleTab *self)
+@@ -384,3 +385,15 @@ kgx_simple_tab_init (KgxSimpleTab *self)
  {
    gtk_widget_init_template (GTK_WIDGET (self));
  }
@@ -129,7 +129,7 @@ index b4dac7c..9b909ce 100644
  
  G_END_DECLS
 diff --git a/src/kgx-terminal.c b/src/kgx-terminal.c
-index c789395..07bb898 100644
+index 2fb1def..0a0382d 100644
 --- a/src/kgx-terminal.c
 +++ b/src/kgx-terminal.c
 @@ -32,6 +32,7 @@
@@ -140,16 +140,16 @@ index c789395..07bb898 100644
  
  #include "rgba.h"
  
-@@ -95,6 +96,8 @@ struct _KgxTerminal {
+@@ -90,6 +91,8 @@ struct _KgxTerminal {
+   /* Hyperlinks */
+   char       *current_url;
    int         match_id[KGX_TERMINAL_N_LINK_REGEX];
- 
-   gboolean    popup_is_touch;
 +  GPid pid;
 +  GFileMonitor *pid_monitor;
  };
  
  
-@@ -219,6 +222,61 @@ kgx_terminal_set_property (GObject      *object,
+@@ -210,6 +213,61 @@ kgx_terminal_set_property (GObject      *object,
    }
  }
  
@@ -211,7 +211,7 @@ index c789395..07bb898 100644
  
  static void
  kgx_terminal_get_property (GObject    *object,
-@@ -229,6 +287,7 @@ kgx_terminal_get_property (GObject    *object,
+@@ -220,6 +278,7 @@ kgx_terminal_get_property (GObject    *object,
    KgxTerminal *self = KGX_TERMINAL (object);
    const char *uri;
    g_autoptr (GFile) path = NULL;
@@ -219,7 +219,7 @@ index c789395..07bb898 100644
  
    switch (property_id) {
      case PROP_SETTINGS:
-@@ -239,6 +298,8 @@ kgx_terminal_get_property (GObject    *object,
+@@ -233,6 +292,8 @@ kgx_terminal_get_property (GObject    *object,
          path = g_file_new_for_uri (uri);
        } else if ((uri = vte_terminal_get_current_directory_uri (VTE_TERMINAL (self)))) {
          path = g_file_new_for_uri (uri);
@@ -228,7 +228,7 @@ index c789395..07bb898 100644
        }
        g_value_set_object (value, path);
        break;
-@@ -822,6 +883,9 @@ kgx_terminal_init (KgxTerminal *self)
+@@ -695,6 +756,9 @@ kgx_terminal_init (KgxTerminal *self)
  {
    gtk_widget_init_template (GTK_WIDGET (self));
  
@@ -238,7 +238,7 @@ index c789395..07bb898 100644
    gtk_widget_action_set_enabled (GTK_WIDGET (self), "term.open-link", FALSE);
    gtk_widget_action_set_enabled (GTK_WIDGET (self), "term.copy-link", FALSE);
    gtk_widget_action_set_enabled (GTK_WIDGET (self), "term.copy", FALSE);
-@@ -860,6 +924,15 @@ kgx_terminal_init (KgxTerminal *self)
+@@ -757,6 +821,15 @@ got_paste (GObject      *source,
  }
  
  
@@ -267,10 +267,10 @@ index 406b041..427f8bc 100644
 +
  G_END_DECLS
 diff --git a/src/kgx-window.c b/src/kgx-window.c
-index 15919fa..e4f575f 100644
+index 69bbe02..3f49761 100644
 --- a/src/kgx-window.c
 +++ b/src/kgx-window.c
-@@ -639,12 +639,17 @@ kgx_window_get_working_dir (KgxWindow *self)
+@@ -701,12 +701,17 @@ kgx_window_get_working_dir (KgxWindow *self)
  {
    KgxWindowPrivate *priv;
    GFile *file = NULL;
