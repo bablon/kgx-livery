@@ -19,7 +19,7 @@ Build-Depends:
  appstream-util <!nocheck>,
 Standards-Version: 4.6.2
 X-Ubuntu-Use-Langpack: yes
-Homepage: https://gitlab.gnome.org/GNOME/console
+Homepage: https://apps.gnome.org/Console/
 Vcs-Browser: https://salsa.debian.org/gnome-team/gnome-console
 Vcs-Git: https://salsa.debian.org/gnome-team/gnome-console.git
 Rules-Requires-Root: no
