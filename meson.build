@@ -1,5 +1,5 @@
 project('gnome-console', 'c',
-                  version: '45.0',
+                  version: '46.rc',
             meson_version: '>= 0.59.0',
                   license: 'GPL-3.0-or-later',
           default_options: [
@@ -112,7 +112,13 @@ endforeach
 global_cargs = []
 
 if get_option('buildtype') != 'plain'
-  foreach arg: ['-fstack-protector-strong', '-fno-omit-frame-pointer']
+  debug_args = [
+    '-fstack-protector-strong',
+    '-fno-omit-frame-pointer',
+    '-mno-omit-leaf-frame-pointer',
+    '-fasynchronous-unwind-tables',
+  ]
+  foreach arg: debug_args
     if cc.has_multi_arguments(arg)
       global_cargs += arg
     endif
@@ -124,7 +130,7 @@ add_project_arguments(global_cargs, language: 'c')
 gio_dep = dependency('gio-2.0', version: '>= 2.76')
 gio_unix_dep = dependency('gio-unix-2.0', version: '>= 2.76')
 adw_dep = dependency('libadwaita-1', version: '>= 1.4.alpha')
-vte_dep = dependency('vte-2.91-gtk4', version: '>= 0.69.91')
+vte_dep = dependency('vte-2.91-gtk4', version: '>= 0.75.1')
 gtk_dep = dependency('gtk4', version: '>= 4.12.2')
 gtop_dep = dependency('libgtop-2.0')
 pcre_dep = dependency('libpcre2-8', version: '>= 10.32')

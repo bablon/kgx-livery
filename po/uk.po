@@ -2,13 +2,13 @@
 # Copyright (C) 2020 kgx's COPYRIGHT HOLDER
 # This file is distributed under the same license as the kgx package.
 #
-# Yuri Chornoivan <yurchor@ukr.net>, 2020, 2021, 2022, 2023.
+# Yuri Chornoivan <yurchor@ukr.net>, 2020, 2021, 2022, 2023, 2024.
 msgid ""
 msgstr ""
 "Project-Id-Version: kgx master\n"
 "Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/console/issues\n"
-"POT-Creation-Date: 2023-08-05 06:17+0000\n"
-"PO-Revision-Date: 2023-08-05 09:53+0300\n"
+"POT-Creation-Date: 2024-01-22 13:36+0000\n"
+"PO-Revision-Date: 2024-02-13 20:38+0200\n"
 "Last-Translator: Yuri Chornoivan <yurchor@ukr.net>\n"
 "Language-Team: Ukrainian <trans-uk@lists.fedoraproject.org>\n"
 "Language: uk\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=4; plural=n==1 ? 3 : n%10==1 && n%100!=11 ? 0 : n"
 "%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
-"X-Generator: Lokalize 20.12.0\n"
+"X-Generator: Lokalize 23.04.1\n"
 
 #: data/org.gnome.Console.desktop.in.in:3
 #: data/org.gnome.Console.metainfo.xml.in.in:8 src/kgx-application.h:27
@@ -35,7 +35,7 @@ msgstr ""
 msgid "New Window"
 msgstr "Нове вікно"
 
-#: data/org.gnome.Console.desktop.in.in:27 src/kgx-window.ui:167
+#: data/org.gnome.Console.desktop.in.in:27 src/kgx-window.ui:164
 msgid "New Tab"
 msgstr "Нова вкладка"
 
@@ -51,7 +51,7 @@ msgstr "Простий зручний для користувачів термі
 msgid "Terminal window"
 msgstr "Вікно термінала"
 
-#: data/org.gnome.Console.metainfo.xml.in.in:262 src/kgx-window.c:457
+#: data/org.gnome.Console.metainfo.xml.in.in:330 src/kgx-window.c:471
 msgid "The GNOME Project"
 msgstr "Проєкт GNOME"
 
@@ -126,15 +126,11 @@ msgid "Move Tab Left"
 msgstr "Пересунути вкладку ліворуч"
 
 #: src/help-overlay.ui:92
-#| msgctxt "shortcut window"
-#| msgid "Switch to Tab"
 msgctxt "shortcut window"
 msgid "Switch to Tab 1–9"
 msgstr "Перемкнутися на вкладку 1–9"
 
 #: src/help-overlay.ui:98
-#| msgctxt "shortcut window"
-#| msgid "Switch to Tab"
 msgctxt "shortcut window"
 msgid "Switch to Tab 10"
 msgstr "Перемкнутися на вкладку 10"
@@ -151,7 +147,7 @@ msgid "# KGX %s using VTE %u.%u.%u %s\n"
 msgstr "# KGX %s з використанням VTE %u.%u.%u %s\n"
 
 #. Translators: %s is the year range
-#: src/kgx-application.c:361 src/kgx-window.c:452
+#: src/kgx-application.c:361 src/kgx-window.c:466
 #, c-format
 msgid "© %s Zander Brown"
 msgstr "© Zander Brown, %s"
@@ -209,47 +205,89 @@ msgstr "РЯДКИ"
 msgid "[-e|-- COMMAND [ARGUMENT...]]"
 msgstr "[-e|-- КОМАНДА [АРГУМЕНТ...]]"
 
-#: src/kgx-close-dialog.c:50
+#: src/kgx-close-dialog.c:94
 msgid "Close Window?"
 msgstr "Закрити вікно?"
 
-#: src/kgx-close-dialog.c:51
+#: src/kgx-close-dialog.c:96
+#| msgid ""
+#| "Some commands are still running, closing this window will kill them and "
+#| "may lead to unexpected outcomes"
 msgid ""
+"A command is still running, closing this window will kill it and may lead to "
+"unexpected outcomes"
+msgid_plural ""
 "Some commands are still running, closing this window will kill them and may "
 "lead to unexpected outcomes"
-msgstr ""
+msgstr[0] ""
 "Виконання якихось із команд ще не завершено. Закриття цього вікна призведе "
 "до аварійного завершення роботи цих команд і може мати непередбачувані "
 "наслідки."
+msgstr[1] ""
+"Виконання якихось із команд ще не завершено. Закриття цього вікна призведе "
+"до аварійного завершення роботи цих команд і може мати непередбачувані "
+"наслідки."
+msgstr[2] ""
+"Виконання якихось із команд ще не завершено. Закриття цього вікна призведе "
+"до аварійного завершення роботи цих команд і може мати непередбачувані "
+"наслідки."
+msgstr[3] ""
+"Виконання якоїсь із команд ще не завершено. Закриття цього вікна призведе "
+"до аварійного завершення робот цієї команди і може мати непередбачувані "
+"наслідки."
 
-#: src/kgx-close-dialog.c:56
+#: src/kgx-close-dialog.c:103
 msgid "Close Tab?"
 msgstr "Закрити вкладку?"
 
-#: src/kgx-close-dialog.c:57
+#: src/kgx-close-dialog.c:105
+#| msgid ""
+#| "Some commands are still running, closing this tab will kill them and may "
+#| "lead to unexpected outcomes"
 msgid ""
+"A command is still running, closing this tab will kill it and may lead to "
+"unexpected outcomes"
+msgid_plural ""
 "Some commands are still running, closing this tab will kill them and may "
 "lead to unexpected outcomes"
-msgstr ""
+msgstr[0] ""
 "Виконання якихось із команд ще не завершено. Закриття цієї вкладки призведе "
 "до аварійного завершення роботи цих команд і може мати непередбачувані "
 "наслідки."
+msgstr[1] ""
+"Виконання якихось із команд ще не завершено. Закриття цієї вкладки призведе "
+"до аварійного завершення роботи цих команд і може мати непередбачувані "
+"наслідки."
+msgstr[2] ""
+"Виконання якихось із команд ще не завершено. Закриття цієї вкладки призведе "
+"до аварійного завершення роботи цих команд і може мати непередбачувані "
+"наслідки."
+msgstr[3] ""
+"Виконання якоїсь із команд ще не завершено. Закриття цієї вкладки призведе "
+"до аварійного завершення роботи цієї команди і може мати непередбачувані "
+"наслідки."
 
-#: src/kgx-close-dialog.ui:18 src/kgx-font-picker.ui:30 src/kgx-terminal.c:915
+#. Translators: Screen reader label for the list of running commands
+#: src/kgx-close-dialog.c:232
+#| msgid "Process %d"
+msgid "Process list"
+msgstr "Список процесів"
+
+#. Translators: This action dismisses the dialogue, leaving the tab/window open
+#: src/kgx-close-dialog.c:246 src/kgx-font-picker.ui:30 src/kgx-terminal.c:890
 msgid "_Cancel"
 msgstr "_Скасувати"
 
-#: src/kgx-close-dialog.ui:19
+#. Translators: This action accepts the ‘unexpected outcomes’ and closes the tab/window
+#: src/kgx-close-dialog.c:248
 msgid "C_lose"
 msgstr "_Закрити"
 
 #: src/kgx-font-picker.ui:12
-#| msgid "Terminal"
 msgid "Terminal Font"
 msgstr "Шрифт термінала"
 
 #: src/kgx-font-picker.ui:37
-#| msgid "_Select All"
 msgid "_Select"
 msgstr "_Вибрати"
 
@@ -266,7 +304,6 @@ msgid "Font Preview"
 msgstr "Попередній перегляд шрифту"
 
 #: src/kgx-font-picker.ui:188
-#| msgid "Reset Size"
 msgid "Font Size"
 msgstr "Розмір шрифту"
 
@@ -274,7 +311,7 @@ msgstr "Розмір шрифту"
 #. * this string will only be seen when the running program has
 #. * failed to set a title, and exists purely to avoid blank tabs
 #.
-#: src/kgx-pages.c:424
+#: src/kgx-pages.c:473
 #, c-format
 msgid "Tab %i"
 msgstr "Вкладка %i"
@@ -300,7 +337,6 @@ msgid "Font"
 msgstr "Шрифт"
 
 #: src/kgx-preferences-window.ui:13
-#| msgid "Use System Colors"
 msgid "Use _System Default"
 msgstr "_Типове для системи"
 
@@ -309,7 +345,6 @@ msgid "Custom _Font"
 msgstr "Нетиповий _шрифт"
 
 #: src/kgx-preferences-window.ui:59
-#| msgid "Terminal"
 msgid "Terminal Bell"
 msgstr "Звуковий сигнал у терміналі"
 
@@ -320,6 +355,11 @@ msgstr "Відтворити зв_ук"
 #: src/kgx-preferences-window.ui:68
 msgid "_Visual Effects"
 msgstr "_Візуальні ефекти"
+
+#: src/kgx-process.c:198
+#, c-format
+msgid "Process %d"
+msgstr "Процес %d"
 
 #. translators: <b> </b> marks the text as bold, ensure they are
 #. matched please!
@@ -341,7 +381,7 @@ msgstr "<b>Лише читання</b> — виконання команди з�
 msgid "<b>Failed to start</b> — %s"
 msgstr "<b>Не вдалося запустити</b> – %s"
 
-#: src/kgx-tab.c:1091
+#: src/kgx-tab.c:1112
 msgid "Command completed"
 msgstr "Виконання команди завершено"
 
@@ -357,7 +397,7 @@ msgstr "Попередній відповідник"
 msgid "Next Match"
 msgstr "Наступний відповідник"
 
-#: src/kgx-terminal.c:582
+#: src/kgx-terminal.c:557
 #, c-format
 msgid ""
 "Ctrl-click to open:\n"
@@ -366,12 +406,12 @@ msgstr ""
 "Ctrl-клацання, щоб відкрити:\n"
 "%s"
 
-#: src/kgx-terminal.c:908
+#: src/kgx-terminal.c:883
 msgid "You are pasting a command that runs as an administrator"
 msgstr "Ви вставили команду, яку слід запускати від імені адміністратора"
 
 #. TRANSLATORS: %s is the command being pasted
-#: src/kgx-terminal.c:912
+#: src/kgx-terminal.c:887
 #, c-format
 msgid ""
 "Make sure you know what the command does:\n"
@@ -380,7 +420,7 @@ msgstr ""
 "Переконайтеся у тому, що вам відомі наслідки виконання команди:\n"
 "%s"
 
-#: src/kgx-terminal.c:916 src/kgx-terminal.ui:24
+#: src/kgx-terminal.c:891 src/kgx-terminal.ui:24
 msgid "_Paste"
 msgstr "Вст_авити"
 
@@ -417,7 +457,7 @@ msgid "Dark Style"
 msgstr "Темний стиль"
 
 #. Translators: Credit yourself here
-#: src/kgx-window.c:464
+#: src/kgx-window.c:478
 msgid "translator-credits"
 msgstr "Юрій Чорноіван <yurchor@ukr.net>"
 
@@ -441,23 +481,23 @@ msgstr "_Клавіатурні скорочення"
 msgid "_About Console"
 msgstr "_Про «Консоль»"
 
-#: src/kgx-window.ui:80
+#: src/kgx-window.ui:79
 msgid "Find in Terminal"
 msgstr "Знайти у терміналі"
 
-#: src/kgx-window.ui:88
+#: src/kgx-window.ui:86
 msgid "Main Menu"
 msgstr "Головне меню"
 
-#: src/kgx-window.ui:106
+#: src/kgx-window.ui:104
 msgid "Shrink Text"
 msgstr "Стиснути текст"
 
-#: src/kgx-window.ui:117
+#: src/kgx-window.ui:115
 msgid "Reset Size"
 msgstr "Відновити початковий розмір"
 
-#: src/kgx-window.ui:141
+#: src/kgx-window.ui:139
 msgid "Enlarge Text"
 msgstr "Збільшити текст"
 
