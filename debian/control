@@ -13,7 +13,7 @@ Build-Depends:
  libgtop2-dev,
  libgtk-4-dev (>= 4.12.2),
  libpcre2-dev,
- libvte-2.91-gtk4-dev (>= 0.69.91),
+ libvte-2.91-gtk4-dev (>= 0.75.1),
  meson,
 # Tests:
  appstream-util <!nocheck>,
