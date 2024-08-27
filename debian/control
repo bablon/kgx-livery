@@ -17,7 +17,7 @@ Build-Depends:
  meson,
 # Tests:
  appstream-util <!nocheck>,
-Standards-Version: 4.6.2
+Standards-Version: 4.7.0
 X-Ubuntu-Use-Langpack: yes
 Homepage: https://apps.gnome.org/Console/
 Vcs-Browser: https://salsa.debian.org/gnome-team/gnome-console
