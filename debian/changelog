@@ -1,3 +1,14 @@
+gnome-console (46.0-2) unstable; urgency=medium
+
+  * Bump minimum glib, gtk4, and vte2.91
+  * Bump Standards Version to 4.7.0
+  * Stop using dh-sequence-gnome
+  * Remove Ubuntu purple background patch because gnome-console
+    won't be Ubuntu's default terminal, but maybe ptyxis will be
+    eventually (LP: #2036353, #2039616)
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Tue, 27 Aug 2024 11:30:37 -0400
+
 gnome-console (46.0-1) unstable; urgency=medium
 
   * New upstream release
