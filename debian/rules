@@ -15,5 +15,3 @@ endif
 override_dh_auto_configure:
 	dh_auto_configure -- $(MESON_OPTS) \
 		-Dauto_features=enabled
-
-override_dh_gnome_clean:

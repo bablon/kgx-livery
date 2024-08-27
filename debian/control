@@ -6,7 +6,6 @@ Uploaders: Jeremy Bícha <jbicha@ubuntu.com>, Arnaud Ferraris <aferraris@debian.
 Build-Depends:
  debhelper-compat (= 13),
  desktop-file-utils,
- dh-sequence-gnome,
  gsettings-desktop-schemas-dev,
  libadwaita-1-dev (>= 1.4~beta),
  libglib2.0-dev (>= 2.80.0),
@@ -18,7 +17,6 @@ Build-Depends:
 # Tests:
  appstream-util <!nocheck>,
 Standards-Version: 4.7.0
-X-Ubuntu-Use-Langpack: yes
 Homepage: https://apps.gnome.org/Console/
 Vcs-Browser: https://salsa.debian.org/gnome-team/gnome-console
 Vcs-Git: https://salsa.debian.org/gnome-team/gnome-console.git
