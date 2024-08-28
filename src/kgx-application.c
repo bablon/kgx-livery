@@ -1,6 +1,6 @@
-/* kgx-window.c
+/* kgx-application.c
  *
- * Copyright 2019 Zander Brown
+ * Copyright 2019-2024 Zander Brown
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,35 +16,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:kgx-application
- * @title: KgxApplication
- * @short_description: Application
- *
- * The application, on the face of it nothing particularly interesting but
- * under the hood it contains a #GSource used to monitor the shells (and
- * there children) running in the open #KgxWindow s
- */
-
 #include "kgx-config.h"
 
 #include <glib/gi18n.h>
-#include <vte/vte.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
 
-#include "rgba.h"
+#include "kgx-about.h"
+#include "kgx-depot.h"
+#include "kgx-drop-target.h"
+#include "kgx-pages.h"
+#include "kgx-resources.h"
+#include "kgx-settings.h"
+#include "kgx-simple-tab.h"
+#include "kgx-terminal.h"
+#include "kgx-train.h"
+#include "kgx-utils.h"
+#include "kgx-watcher.h"
+#include "kgx-window.h"
 
 #include "kgx-application.h"
-#include "kgx-window.h"
-#include "kgx-pages.h"
-#include "kgx-drop-target.h"
-#include "kgx-simple-tab.h"
-#include "kgx-resources.h"
-#include "kgx-watcher.h"
 
-#define LOGO_COL_SIZE 28
-#define LOGO_ROW_SIZE 14
+#define ARGV_ARGUMENT "extracted-argv"
 
 
 struct _KgxApplication {
@@ -53,10 +44,24 @@ struct _KgxApplication {
   GTree                    *pages;
   KgxSettings              *settings;
   KgxWatcher               *watcher;
+  KgxDepot                 *depot;
+
+  /* this is simply a hashset of pointers, NOT references */
+  GHashTable               *active_windows;
+
+  GStrv                     argv;
 };
 
 
 G_DEFINE_TYPE (KgxApplication, kgx_application, ADW_TYPE_APPLICATION)
+
+
+enum {
+  PROP_0,
+  PROP_IN_BACKGROUND,
+  LAST_PROP
+};
+static GParamSpec *pspecs[LAST_PROP] = { NULL, };
 
 
 static void
@@ -67,8 +72,33 @@ kgx_application_dispose (GObject *object)
   g_clear_pointer (&self->pages, g_tree_unref);
   g_clear_object (&self->settings);
   g_clear_object (&self->watcher);
+  g_clear_object (&self->depot);
+
+  g_clear_pointer (&self->active_windows, g_hash_table_unref);
+
+  g_clear_pointer (&self->argv, g_strfreev);
 
   G_OBJECT_CLASS (kgx_application_parent_class)->dispose (object);
+}
+
+
+static void
+kgx_application_get_property (GObject    *object,
+                              guint       property_id,
+                              GValue     *value,
+                              GParamSpec *pspec)
+{
+  KgxApplication *self = KGX_APPLICATION (object);
+
+  switch (property_id) {
+    case PROP_IN_BACKGROUND:
+      g_value_set_boolean (value,
+                           g_hash_table_size (self->active_windows) < 1);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
 }
 
 
@@ -76,16 +106,12 @@ static void
 kgx_application_activate (GApplication *app)
 {
   GtkWindow *window;
-  guint32 timestamp;
-
-  timestamp = GDK_CURRENT_TIME;
 
   /* Get the current window or create one if necessary. */
   window = gtk_application_get_active_window (GTK_APPLICATION (app));
   if (window == NULL) {
     kgx_application_add_terminal (KGX_APPLICATION (app),
                                   NULL,
-                                  timestamp,
                                   NULL,
                                   NULL,
                                   NULL);
@@ -93,7 +119,7 @@ kgx_application_activate (GApplication *app)
     return;
   }
 
-  gtk_window_present_with_time (window, timestamp);
+  gtk_window_present (window);
 }
 
 
@@ -113,6 +139,7 @@ kgx_application_startup (GApplication *app)
 
   g_resources_register (kgx_get_resource ());
 
+  g_type_ensure (KGX_TYPE_WINDOW);
   g_type_ensure (KGX_TYPE_TERMINAL);
   g_type_ensure (KGX_TYPE_PAGES);
   g_type_ensure (KGX_TYPE_DROP_TARGET);
@@ -150,52 +177,37 @@ kgx_application_open (GApplication  *app,
                       int            n_files,
                       const char    *hint)
 {
-  guint32 timestamp = GDK_CURRENT_TIME;
+  KgxWindow *window = NULL;
+  KgxTab *last_tab = NULL;
 
   for (int i = 0; i < n_files; i++) {
-    kgx_application_add_terminal (KGX_APPLICATION (app),
-                                  NULL,
-                                  timestamp,
-                                  files[i],
-                                  NULL,
-                                  NULL);
+    if (G_UNLIKELY (last_tab && !window)) {
+      window = KGX_WINDOW (gtk_widget_get_root (GTK_WIDGET (last_tab)));
+    }
+
+    last_tab = kgx_application_add_terminal (KGX_APPLICATION (app),
+                                             window,
+                                             files[i],
+                                             NULL,
+                                             NULL);
   }
 }
 
 
-static int
+static gboolean
 kgx_application_local_command_line (GApplication   *app,
                                     char         ***arguments,
                                     int            *exit_status)
 {
-  for (size_t i = 0; (*arguments)[i] != NULL; i++) {
-    /* Don't edit argv[0], but also don't start the loop with i = 1,
-     * because it's technically possible to run a program with argc == 0 */
-    if (i == 0) {
-      continue;
-    }
+  g_autoptr (GError) error = NULL;
+  KgxApplication *self = KGX_APPLICATION (app);
 
-    if (strcmp ((*arguments)[i], "-e") == 0) {
-      /* For xterm-compatible handling of -e, we want to stop parsing
-       * other command-line options at this point, so that
-       *
-       *     kgx -T "Directory listing" -e ls -al /
-       *
-       * passes "-al" to ls instead of trying to parse them as kgx
-       * options. To do this, turn -e into the "--" pseudo-argument -
-       * unless there is exactly one argument following it, in which
-       * case leave it as -e, which the GOptionContext will treat
-       * like --command. */
-      if (!((*arguments)[i + 1] != NULL && (*arguments)[i + 2] == NULL)) {
-        (*arguments)[i][1] = '-';
-      }
+  kgx_filter_arguments (arguments, &self->argv, &error);
 
-      break;
-    } else if (strcmp ((*arguments)[i], "--") == 0) {
-      /* Don't continue to edit arguments after the -- separator,
-       * so you can do: kgx -- some-command ... -e ... */
-      break;
-    }
+  if (error) {
+    g_printerr ("%s\n", error->message);
+    *exit_status = EXIT_FAILURE;
+    return TRUE;
   }
 
   return G_APPLICATION_CLASS (kgx_application_parent_class)->local_command_line (app, arguments, exit_status);
@@ -207,25 +219,24 @@ kgx_application_command_line (GApplication            *app,
                               GApplicationCommandLine *cli)
 {
   KgxApplication *self = KGX_APPLICATION (app);
-  guint32 timestamp = GDK_CURRENT_TIME;
   GVariantDict *options = NULL;
-  g_auto (GStrv) argv = NULL;
+  g_autofree const char **argv = NULL;
+  g_autofree const char **paths = NULL;
   const char *command = NULL;
   const char *working_dir = NULL;
   const char *title = NULL;
   const char *const *shell = NULL;
-  const char *cwd = NULL;
   gint64 scrollback;
   gboolean tab;
-  g_autoptr (GFile) path = NULL;
+  KgxWindow *window = NULL;
 
   options = g_application_command_line_get_options_dict (cli);
-  cwd = g_application_command_line_get_cwd (cli);
 
   g_variant_dict_lookup (options, "working-directory", "^&ay", &working_dir);
   g_variant_dict_lookup (options, "title", "&s", &title);
   g_variant_dict_lookup (options, "command", "^&ay", &command);
-  g_variant_dict_lookup (options, G_OPTION_REMAINING, "^aay", &argv);
+  g_variant_dict_lookup (options, ARGV_ARGUMENT, "^a&ay", &argv);
+  g_variant_dict_lookup (options, G_OPTION_REMAINING, "^a&ay", &paths);
 
   if (g_variant_dict_lookup (options, "set-shell", "^as", &shell) && shell) {
     kgx_settings_set_custom_shell (self->settings, shell);
@@ -234,161 +245,136 @@ kgx_application_command_line (GApplication            *app,
   }
 
   if (g_variant_dict_lookup (options, "set-scrollback", "x", &scrollback)) {
-    kgx_settings_set_scrollback (self->settings, scrollback);
+    kgx_settings_set_scrollback_limit (self->settings, scrollback);
 
     return EXIT_SUCCESS;
   }
 
-  if (working_dir != NULL) {
-    path = g_file_new_for_commandline_arg_and_cwd (working_dir, cwd);
-  }
-
-  if (path == NULL) {
-    path = g_file_new_for_path (cwd);
-  }
-
-  if (command != NULL) {
-    gboolean can_exec_directly;
-
-    if (argv != NULL && argv[0] != NULL) {
-      g_warning (_("Cannot use both --command and positional parameters"));
-      return EXIT_FAILURE;
-    }
-
-    g_clear_pointer (&argv, g_strfreev);
-
-    if (strchr (command, '/') != NULL) {
-      can_exec_directly = g_file_test (command, G_FILE_TEST_IS_EXECUTABLE);
-    } else {
-      g_autofree char *program = g_find_program_in_path (command);
-
-      can_exec_directly = (program != NULL);
-    }
-
-    if (can_exec_directly) {
-      argv = g_new0 (char *, 2);
-      argv[0] = g_strdup (command);
-      argv[1] = NULL;
-    } else {
-      argv = g_new0 (char *, 4);
-      argv[0] = g_strdup ("/bin/sh");
-      argv[1] = g_strdup ("-c");
-      argv[2] = g_strdup (command);
-      argv[3] = NULL;
-    }
+  if (working_dir && paths) {
+    g_application_command_line_printerr (cli,
+                                         _("Cannot use both --working-directory and positional parameters"));
+    return EXIT_FAILURE;
   }
 
   if (g_variant_dict_lookup (options, "tab", "b", &tab) && tab) {
-    kgx_application_add_terminal (self,
-                                  KGX_WINDOW (gtk_application_get_active_window (GTK_APPLICATION (self))),
-                                  timestamp,
-                                  path,
-                                  argv,
-                                  title);
+    window = KGX_WINDOW (gtk_application_get_active_window (GTK_APPLICATION (self)));
+  }
+
+  if (paths) {
+    KgxTab *last_tab = NULL;
+
+    for (size_t i = 0; paths[i]; i++) {
+      g_autoptr (GFile) path =
+        g_application_command_line_create_file_for_arg (cli, paths[i]);
+
+      if (G_UNLIKELY (last_tab && !window)) {
+        window = KGX_WINDOW (gtk_widget_get_root (GTK_WIDGET (last_tab)));
+      }
+
+      last_tab = kgx_application_add_terminal (KGX_APPLICATION (app),
+                                              window,
+                                              path,
+                                              NULL,
+                                              NULL);
+    }
   } else {
-    kgx_application_add_terminal (self, NULL, timestamp, path, argv, title);
+    const char *cwd = NULL;
+    g_autoptr (GFile) path = NULL;
+
+    if (working_dir != NULL) {
+      path = g_application_command_line_create_file_for_arg (cli, working_dir);
+    }
+
+    cwd = g_application_command_line_get_cwd (cli);
+
+    if (path == NULL && cwd) {
+      path = g_file_new_for_path (cwd);
+    }
+
+    kgx_application_add_terminal (self, window, path, (GStrv) argv, title);
   }
 
   return EXIT_SUCCESS;
 }
 
 
-static void
-print_center (char *msg, int ign, short width)
-{
-  int half_msg = 0;
-  int half_screen = 0;
-
-  half_msg = strlen (msg) / 2;
-  half_screen = width / 2;
-
-  g_print ("%*s\n",
-           half_screen + half_msg,
-           msg);
-}
-
-static void
-print_logo (short width)
-{
-  g_autoptr (GFile) logo = NULL;
-  g_autoptr (GError) error = NULL;
-  g_auto (GStrv) logo_lines = NULL;
-  g_autofree char *logo_text = NULL;
-  int i = 0;
-  int half_screen = width / 2;
-
-  logo = g_file_new_for_uri ("resource:/" KGX_APPLICATION_PATH "logo.txt");
-
-  g_file_load_contents (logo, NULL, &logo_text, NULL, NULL, &error);
-
-  if (error) {
-    g_error ("Wat? %s", error->message);
-  }
-
-  logo_lines = g_strsplit (logo_text, "\n", -1);
-
-  while (logo_lines[i]) {
-    g_print ("%*s%s\n",
-             half_screen - (LOGO_COL_SIZE / 2),
-             "",
-             logo_lines[i]);
-
-    i++;
-  }
-}
-
 static int
 kgx_application_handle_local_options (GApplication *app,
                                       GVariantDict *options)
 {
+  KgxApplication *self = KGX_APPLICATION (app);
   gboolean version = FALSE;
   gboolean about = FALSE;
 
-  if (g_variant_dict_lookup (options, "version", "b", &version)) {
-    if (version) {
-      // Translators: The leading # is intentional, the initial %s is the
-      // version of KGX itself, the latter format is the VTE version
-      g_print (_("# KGX %s using VTE %u.%u.%u %s\n"),
-               PACKAGE_VERSION,
-               vte_get_major_version (),
-               vte_get_minor_version (),
-               vte_get_micro_version (),
-               vte_get_features ());
-      return EXIT_SUCCESS;
-    }
+  if (g_variant_dict_lookup (options, "version", "b", &version) && version) {
+    kgx_about_print_version ();
+
+    return EXIT_SUCCESS;
   }
 
-  if (g_variant_dict_lookup (options, "about", "b", &about)) {
-    if (about) {
-      g_autofree char *copyright = g_strdup_printf (_("© %s Zander Brown"),
-                                                    "2019-2024");
-      struct winsize w;
-      int padding = 0;
+  if (g_variant_dict_lookup (options, "about", "b", &about) && about) {
+    kgx_about_print_logo ();
 
-      ioctl (STDOUT_FILENO, TIOCGWINSZ, &w);
+    return EXIT_SUCCESS;
+  }
 
-      padding = ((w.ws_row -1) - (LOGO_ROW_SIZE + 5)) / 2;
+  if (self->argv) {
+    GVariant *value =
+      g_variant_new_bytestring_array ((const char * const*) self->argv, -1);
 
-      for (int i = 0; i < padding; i++) {
-        g_print ("\n");
-      }
+    g_variant_dict_insert_value (options, ARGV_ARGUMENT, value);
 
-      print_logo (w.ws_col);
-      print_center ("KGX", -1, w.ws_col);
-      print_center (PACKAGE_VERSION, -1, w.ws_col);
-      print_center (_("Terminal Emulator"), -1, w.ws_col);
-      print_center (copyright, -1, w.ws_col);
-      print_center (_("GPL 3.0 or later"), -1, w.ws_col);
-
-      for (int i = 0; i < padding; i++) {
-        g_print ("\n");
-      }
-
-      return EXIT_SUCCESS;
-    }
+    g_clear_pointer (&self->argv, g_strfreev);
   }
 
   return G_APPLICATION_CLASS (kgx_application_parent_class)->handle_local_options (app, options);
+}
+
+
+static void
+active_changed (GObject *object, GParamSpec *pspec, gpointer user_data)
+{
+  KgxApplication *self = KGX_APPLICATION (user_data);
+
+  if (gtk_window_is_active (GTK_WINDOW (object))) {
+    g_hash_table_add (self->active_windows, object);
+  } else {
+    g_hash_table_remove (self->active_windows, object);
+  }
+
+  g_object_notify_by_pspec (G_OBJECT (self), pspecs[PROP_IN_BACKGROUND]);
+}
+
+
+static void
+kgx_application_window_added (GtkApplication *app,
+                              GtkWindow      *window)
+{
+  KgxApplication *self = KGX_APPLICATION (app);
+
+  g_signal_connect (window,
+                    "notify::is-active", G_CALLBACK (active_changed),
+                    self);
+  active_changed (G_OBJECT (window), NULL, self);
+
+  GTK_APPLICATION_CLASS (kgx_application_parent_class)->window_added (app,
+                                                                      window);
+}
+
+
+static void
+kgx_application_window_removed (GtkApplication *app,
+                                GtkWindow      *window)
+{
+  KgxApplication *self = KGX_APPLICATION (app);
+
+  g_signal_handlers_disconnect_by_data (window, self);
+
+  g_hash_table_remove (self->active_windows, window);
+  g_object_notify_by_pspec (G_OBJECT (self), pspecs[PROP_IN_BACKGROUND]);
+
+  GTK_APPLICATION_CLASS (kgx_application_parent_class)->window_removed (app,
+                                                                        window);
 }
 
 
@@ -397,8 +383,10 @@ kgx_application_class_init (KgxApplicationClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GApplicationClass *app_class = G_APPLICATION_CLASS (klass);
+  GtkApplicationClass *gtk_app_class = GTK_APPLICATION_CLASS (klass);
 
   object_class->dispose = kgx_application_dispose;
+  object_class->get_property = kgx_application_get_property;
 
   app_class->activate = kgx_application_activate;
   app_class->startup = kgx_application_startup;
@@ -406,6 +394,15 @@ kgx_application_class_init (KgxApplicationClass *klass)
   app_class->local_command_line = kgx_application_local_command_line;
   app_class->command_line = kgx_application_command_line;
   app_class->handle_local_options = kgx_application_handle_local_options;
+
+  gtk_app_class->window_added = kgx_application_window_added;
+  gtk_app_class->window_removed = kgx_application_window_removed;
+
+  pspecs[PROP_IN_BACKGROUND] = g_param_spec_boolean ("in-background", NULL, NULL,
+                                                     FALSE,
+                                                     G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  g_object_class_install_properties (object_class, LAST_PROP, pspecs);
 }
 
 
@@ -495,11 +492,11 @@ static GOptionEntry entries[] = {
   {
     G_OPTION_REMAINING,
     0,
-    0,
+    G_OPTION_FLAG_HIDDEN,
     G_OPTION_ARG_FILENAME_ARRAY,
     NULL,
     NULL,
-    N_("[-e|-- COMMAND [ARGUMENT...]]")
+    NULL,
   },
   { NULL }
 };
@@ -511,9 +508,8 @@ new_window_activated (GSimpleAction *action,
                       gpointer       data)
 {
   KgxApplication *self = KGX_APPLICATION (data);
-  guint32 timestamp = GDK_CURRENT_TIME;
 
-  kgx_application_add_terminal (self, NULL, timestamp, NULL, NULL, NULL);
+  kgx_application_add_terminal (self, NULL, NULL, NULL, NULL);
 }
 
 
@@ -523,7 +519,6 @@ new_tab_activated (GSimpleAction *action,
                    gpointer       data)
 {
   KgxApplication *self = KGX_APPLICATION (data);
-  guint32 timestamp = GDK_CURRENT_TIME;
   g_autoptr (GFile) dir = NULL;
   GtkWindow *window;
 
@@ -531,9 +526,9 @@ new_tab_activated (GSimpleAction *action,
   if (window) {
     dir = kgx_window_get_working_dir (KGX_WINDOW (window));
 
-    kgx_application_add_terminal (self, KGX_WINDOW (window), timestamp, dir, NULL, NULL);
+    kgx_application_add_terminal (self, KGX_WINDOW (window), dir, NULL, NULL);
   } else {
-    kgx_application_add_terminal (self, NULL, timestamp, NULL, NULL, NULL);
+    kgx_application_add_terminal (self, NULL, NULL, NULL, NULL);
   }
 }
 
@@ -553,7 +548,7 @@ focus_activated (GSimpleAction *action,
   kgx_pages_focus_page (pages, page);
   root = gtk_widget_get_root (GTK_WIDGET (pages));
 
-  gtk_window_present_with_time (GTK_WINDOW (root), GDK_CURRENT_TIME);
+  gtk_window_present (GTK_WINDOW (root));
 }
 
 
@@ -642,16 +637,25 @@ scale_to_can_reset (GBinding     *binding,
 static void
 kgx_application_init (KgxApplication *self)
 {
-  g_autoptr (GPropertyAction) theme_action = NULL;
   AdwStyleManager *style_manager = adw_style_manager_get_default ();
   GAction *action;
+  g_autoptr (GPropertyAction) theme_action = NULL;
+  /* Translators: %s is the version string, KGX is a codename and should be left as-is */
+  g_autofree char *summary = g_strdup_printf (_("KGX %s — Terminal Emulator"), PACKAGE_VERSION);
 
   g_application_add_main_option_entries (G_APPLICATION (self), entries);
+  g_application_set_option_context_description (G_APPLICATION (self),
+                                                "https://apps.gnome.org/Console/");
+  g_application_set_option_context_parameter_string (G_APPLICATION (self),
+                                                     _("[-e|-- COMMAND [ARGUMENT...]]"));
+  g_application_set_option_context_summary (G_APPLICATION (self), summary);
 
   g_action_map_add_action_entries (G_ACTION_MAP (self),
                                    app_entries,
                                    G_N_ELEMENTS (app_entries),
                                    self);
+
+  self->active_windows = g_hash_table_new (g_direct_hash, g_direct_equal);
 
   self->settings = g_object_new (KGX_TYPE_SETTINGS, NULL);
   g_object_bind_property_full (self->settings, "theme",
@@ -679,6 +683,14 @@ kgx_application_init (KgxApplication *self)
   g_action_map_add_action (G_ACTION_MAP (self), G_ACTION (theme_action));
 
   self->watcher = g_object_new (KGX_TYPE_WATCHER, NULL);
+  g_object_bind_property (self, "in-background",
+                          self->watcher, "in-background",
+                          G_BINDING_SYNC_CREATE);
+
+  self->depot = g_object_new (KGX_TYPE_DEPOT,
+                              "watcher", self->watcher,
+                              "train-type", KGX_TYPE_TRAIN,
+                              NULL);
 
   self->pages = g_tree_new_full (kgx_pid_cmp, NULL, NULL, NULL);
 }
@@ -741,52 +753,38 @@ started (GObject      *src,
          gpointer      app)
 {
   g_autoptr (GError) error = NULL;
-  KgxApplication *self = KGX_APPLICATION (app);
-  KgxTab *page = KGX_TAB (src);
-  GPid pid;
 
-  pid = kgx_tab_start_finish (page, res, &error);
+  kgx_tab_start_finish (KGX_TAB (src), res, &error);
 
   if (error) {
     g_warning ("Failed to start %s: %s",
                G_OBJECT_TYPE_NAME (src),
                error->message);
-
-    return;
   }
-
-  kgx_watcher_add (self->watcher, pid, page);
 }
 
 
 KgxTab *
 kgx_application_add_terminal (KgxApplication *self,
                               KgxWindow      *existing_window,
-                              guint32         timestamp,
                               GFile          *working_directory,
                               GStrv           argv,
                               const char     *title)
 {
   g_autofree char *directory = NULL;
-  g_auto (GStrv) shell = NULL;
   GtkWindow *window;
   KgxTab *tab;
 
-  if (G_LIKELY (argv == NULL)) {
-    shell = kgx_settings_get_shell (self->settings);
-  }
-
   if (working_directory) {
     directory = g_file_get_path (working_directory);
-  } else {
-    directory = g_strdup (g_get_home_dir ());
   }
 
   tab = g_object_new (KGX_TYPE_SIMPLE_TAB,
                       "application", self,
                       "settings", self->settings,
+                      "depot", self->depot,
                       "initial-work-dir", directory,
-                      "command", shell != NULL ? shell : argv,
+                      "command", argv,
                       "tab-title", title,
                       "close-on-quit", argv == NULL,
                       NULL);
@@ -813,7 +811,6 @@ kgx_application_add_terminal (KgxApplication *self,
     window = g_object_new (KGX_TYPE_WINDOW,
                            "application", self,
                            "settings", self->settings,
-                           "watcher", self->watcher,
                            "default-width", width,
                            "default-height", height,
                            "maximized", maximised,
@@ -822,7 +819,7 @@ kgx_application_add_terminal (KgxApplication *self,
 
   kgx_window_add_tab (KGX_WINDOW (window), tab);
 
-  gtk_window_present_with_time (window, timestamp);
+  gtk_window_present (window);
 
   return KGX_TAB (tab);
 }

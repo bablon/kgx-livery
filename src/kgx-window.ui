@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <requires lib="gtk" version="4.0"/>
+  <requires lib="gtk" version="4.0" />
   <menu id="primary_menu">
     <section>
       <item>
@@ -46,18 +46,25 @@
         <lookup name="title">pages</lookup>
       </closure>
     </binding>
-    <signal name="notify::is-active" handler="active_changed" swapped="no"/>
+    <binding name="translucent">
+      <closure type='gboolean' function='and'>
+        <lookup name="transparency">
+          <lookup name="settings">KgxWindow</lookup>
+        </lookup>
+        <lookup name="floating">KgxWindow</lookup>
+      </closure>
+    </binding>
     <property name="width-request">360</property>
     <property name="height-request">294</property>
     <property name="content">
       <object class="AdwTabOverview" id="tab_overview">
         <property name="enable-new-tab">True</property>
         <property name="view" bind-source="pages" bind-property="tab-view" bind-flags="sync-create" />
-        <signal name="create-tab" handler="create_tab_cb" swapped="yes"/>
+        <signal name="create-tab" handler="create_tab_cb" swapped="yes" />
         <property name="child">
           <object class="AdwToolbarView" id="toolbar_view">
             <style>
-              <class name="main-box"/>
+              <class name="main-box" />
             </style>
             <property name="top-bar-style">raised</property>
             <child type="top">
@@ -70,7 +77,8 @@
                         <lookup name="title">KgxWindow</lookup>
                       </closure>
                     </binding>
-                    <property name="title" bind-source="KgxWindow" bind-property="title" bind-flags="sync-create" />
+                    <property name="title" bind-source="KgxWindow" bind-property="title"
+                      bind-flags="sync-create" />
                   </object>
                 </property>
                 <child type="start">
@@ -90,7 +98,7 @@
                       <object class="GtkPopoverMenu">
                         <property name="menu-model">primary_menu</property>
                         <child type="theme-switcher">
-                          <object class="KgxThemeSwitcher" id="theme_switcher"/>
+                          <object class="KgxThemeSwitcher" id="theme_switcher" />
                         </child>
                         <child type="zoom-controls">
                           <object class="GtkBox">
@@ -105,8 +113,8 @@
                                 <property name="tooltip-text" translatable="yes">Shrink Text</property>
                                 <property name="halign">center</property>
                                 <style>
-                                  <class name="circular"/>
-                                  <class name="flat"/>
+                                  <class name="circular" />
+                                  <class name="flat" />
                                 </style>
                               </object>
                             </child>
@@ -116,8 +124,8 @@
                                 <property name="tooltip-text" translatable="yes">Reset Size</property>
                                 <property name="halign">center</property>
                                 <style>
-                                  <class name="flat"/>
-                                  <class name="numeric"/>
+                                  <class name="flat" />
+                                  <class name="numeric" />
                                 </style>
                                 <child>
                                   <object class="GtkLabel">
@@ -140,8 +148,8 @@
                                 <property name="tooltip-text" translatable="yes">Enlarge Text</property>
                                 <property name="halign">center</property>
                                 <style>
-                                  <class name="circular"/>
-                                  <class name="flat"/>
+                                  <class name="circular" />
+                                  <class name="flat" />
                                 </style>
                               </object>
                             </child>
@@ -155,7 +163,8 @@
                   <object class="AdwTabButton" id="tab_button">
                     <property name="visible">False</property>
                     <property name="action-name">win.show-tabs</property>
-                    <property name="view" bind-source="pages" bind-property="tab-view" bind-flags="sync-create" />
+                    <property name="view" bind-source="pages" bind-property="tab-view"
+                      bind-flags="sync-create" />
                   </object>
                 </child>
                 <child type="end">
@@ -170,18 +179,22 @@
             </child>
             <child type="top">
               <object class="AdwTabBar" id="tab_bar">
-                <property name="view" bind-source="pages" bind-property="tab-view" bind-flags="sync-create" />
-                <signal name="extra-drag-drop" handler="extra_drag_drop" swapped="no"/>
+                <property name="view" bind-source="pages" bind-property="tab-view"
+                  bind-flags="sync-create" />
+                <signal name="extra-drag-drop" handler="extra_drag_drop" swapped="no" />
               </object>
             </child>
             <child>
               <object class="KgxPages" id="pages">
-                <property name="settings" bind-source="KgxWindow" bind-property="settings" bind-flags="sync-create" />
-                <property name="is-active" bind-source="KgxWindow" bind-property="is-active" bind-flags="sync-create" />
-                <property name="search-mode-enabled" bind-source="KgxWindow" bind-property="search-mode-enabled" bind-flags="bidirectional" />
-                <signal name="zoom" handler="zoom" swapped="no"/>
-                <signal name="create-tearoff-host" handler="create_tearoff_host" swapped="no"/>
-                <signal name="maybe-close-window" handler="maybe_close_window" swapped="yes"/>
+                <property name="settings" bind-source="KgxWindow" bind-property="settings"
+                  bind-flags="sync-create" />
+                <property name="is-active" bind-source="KgxWindow" bind-property="is-active"
+                  bind-flags="sync-create" />
+                <property name="search-mode-enabled" bind-source="KgxWindow"
+                  bind-property="search-mode-enabled" bind-flags="bidirectional" />
+                <signal name="zoom" handler="zoom" swapped="no" />
+                <signal name="create-tearoff-host" handler="create_tearoff_host" swapped="no" />
+                <signal name="maybe-close-window" handler="maybe_close_window" swapped="yes" />
                 <signal name="notify::status" handler="status_changed" swapped="yes" />
                 <signal name="notify::ringing" handler="ringing_changed" swapped="yes" />
               </object>
@@ -196,15 +209,17 @@
         <setter object="tab_button" property="visible">True</setter>
         <setter object="new_tab_button" property="visible">False</setter>
         <setter object="tab_bar" property="visible">False</setter>
-        <signal name="apply" handler="breakpoint_applied" swapped="yes"/>
-        <signal name="unapply" handler="breakpoint_unapplied" swapped="yes"/>
+        <signal name="apply" handler="breakpoint_applied" swapped="yes" />
+        <signal name="unapply" handler="breakpoint_unapplied" swapped="yes" />
       </object>
     </child>
     <style>
-      <class name="terminal-window"/>
+      <class name="terminal-window" />
     </style>
   </template>
   <object class="GBindingGroup" id="settings_binds">
-    <property name="source" bind-source="KgxWindow" bind-property="settings" bind-flags="sync-create"/>
+    <property name="source" bind-source="KgxWindow" bind-property="settings"
+      bind-flags="sync-create" />
   </object>
+  <object class="GBindingGroup" id="surface_binds" />
 </interface>

@@ -16,20 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:kgx-simple-tab
- * @title: KgxSimpleTab
- * @short_description: #KgxTab for an old fashioned local terminal
- */
-
 #include "kgx-config.h"
 
 #include <glib/gi18n.h>
 
-#include "kgx-terminal.h"
-#include "kgx-proxy-info.h"
+#include "kgx-depot.h"
+#include "kgx-settings.h"
+#include "kgx-train.h"
+#include "kgx-utils.h"
+
 #include "kgx-simple-tab.h"
-#include "fp-vte-util.h"
 
 
 struct _KgxSimpleTab {
@@ -40,18 +36,22 @@ struct _KgxSimpleTab {
 
   char         *initial_work_dir;
   GStrv         command;
+  GStrv         environ;
+  KgxDepot     *depot;
 
-  GtkWidget    *terminal;
   GCancellable *spawn_cancellable;
 };
 
 
-G_DEFINE_TYPE (KgxSimpleTab, kgx_simple_tab, KGX_TYPE_TAB)
+G_DEFINE_FINAL_TYPE (KgxSimpleTab, kgx_simple_tab, KGX_TYPE_TAB)
+
 
 enum {
   PROP_0,
   PROP_INITIAL_WORK_DIR,
   PROP_COMMAND,
+  PROP_ENVIRON,
+  PROP_DEPOT,
   LAST_PROP
 };
 static GParamSpec *pspecs[LAST_PROP] = { NULL, };
@@ -64,6 +64,8 @@ kgx_simple_tab_dispose (GObject *object)
 
   g_clear_pointer (&self->initial_work_dir, g_free);
   g_clear_pointer (&self->command, g_strfreev);
+  g_clear_pointer (&self->environ, g_strfreev);
+  g_clear_object (&self->depot);
 
   g_cancellable_cancel (self->spawn_cancellable);
   g_clear_object (&self->spawn_cancellable);
@@ -87,6 +89,12 @@ kgx_simple_tab_set_property (GObject      *object,
     case PROP_COMMAND:
       self->command = g_value_dup_boxed (value);
       break;
+    case PROP_ENVIRON:
+      self->environ = g_value_dup_boxed (value);
+      break;
+    case PROP_DEPOT:
+      g_set_object (&self->depot, g_value_get_object (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -109,6 +117,12 @@ kgx_simple_tab_get_property (GObject    *object,
     case PROP_COMMAND:
       g_value_set_boxed (value, self->command);
       break;
+    case PROP_ENVIRON:
+      g_value_set_boxed (value, self->environ);
+      break;
+    case PROP_DEPOT:
+      g_value_set_object (value, self->depot);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -116,109 +130,42 @@ kgx_simple_tab_get_property (GObject    *object,
 }
 
 
-typedef struct {
+struct _StartData {
   KgxSimpleTab *self;
-  GTask *task;
-} StartData;
+};
+
+
+KGX_DEFINE_DATA (StartData, start_data)
 
 
 static void
-clear_start_data (gpointer data)
+start_data_cleanup (StartData *self)
 {
-  StartData *self = data;
-
   g_clear_weak_pointer (&self->self);
-  g_clear_object (&self->task);
-
-  g_free (self);
-}
-
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (StartData, clear_start_data)
-
-
-typedef struct {
-  KgxSimpleTab *self;
-} WaitData;
-
-
-static void
-clear_wait_data (gpointer data)
-{
-  WaitData *self = data;
-
-  g_clear_weak_pointer (&self->self);
-
-  g_free (self);
-}
-
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (WaitData, clear_wait_data)
-
-
-static void
-wait_cb (GPid     pid,
-         int      status,
-         gpointer user_data)
-
-{
-  g_autoptr (WaitData) data = user_data;
-  g_autoptr (GError) error = NULL;
-
-  if (!data->self) {
-    return; /* Tab destroyed before the process actually died */
-  }
-
-  g_return_if_fail (KGX_SIMPLE_TAB (data->self));
-
-  /* wait_check will set @error if it got a signal/non-zero exit */
-  if (!g_spawn_check_wait_status (status, &error)) {
-    g_autofree char *message = NULL;
-
-    // translators: <b> </b> marks the text as bold, ensure they are
-    // matched please!
-    message = g_strdup_printf (_("<b>Read Only</b> — Command exited with code %i"),
-                               status);
-
-    kgx_tab_died (KGX_TAB (data->self), GTK_MESSAGE_ERROR, message, TRUE);
-  } else {
-    kgx_tab_died (KGX_TAB (data->self),
-                  GTK_MESSAGE_INFO,
-    // translators: <b> </b> marks the text as bold, ensure they are
-    // matched please!
-                  _("<b>Read Only</b> — Command exited"),
-                  TRUE);
-  }
 }
 
 
 static void
-spawned (VtePty       *pty,
+spawned (GObject      *source,
          GAsyncResult *res,
-         gpointer      udata)
+         gpointer      user_data)
 
 {
-  g_autoptr (StartData) start_data = udata;
-  g_autoptr (WaitData) wait_data = NULL;
+  g_autoptr (GTask) task = user_data;
+  g_autoptr (KgxTrain) train = NULL;
   g_autoptr (GError) error = NULL;
-  GPid pid;
+  StartData *start_data = kgx_task_get_start_data (task);
 
-  g_return_if_fail (VTE_IS_PTY (pty));
-  g_return_if_fail (G_IS_ASYNC_RESULT (res));
-
-  fp_vte_pty_spawn_finish (pty, res, &pid, &error);
+  train = kgx_depot_spawn_finish (KGX_DEPOT (source), res, &error);
 
   if (!start_data->self) {
     return; /* The tab went away whilst we were spawning */
   }
 
-  g_return_if_fail (KGX_SIMPLE_TAB (start_data->self));
-
   if (error) {
     g_autofree char *message = NULL;
 
-    // translators: <b> </b> marks the text as bold, ensure they are
-    // matched please!
+    /* Translators: <b> </b> marks the text as bold, ensure they are matched please! */
     message = g_strdup_printf (_("<b>Failed to start</b> — %s"),
                                error->message);
 
@@ -227,17 +174,14 @@ spawned (VtePty       *pty,
                   message,
                   FALSE);
 
-    g_task_return_error (start_data->task, g_steal_pointer (&error));
+    g_task_return_error (task, g_steal_pointer (&error));
 
     return;
   }
 
-  wait_data = g_new0 (WaitData, 1);
-  g_set_weak_pointer (&wait_data->self, start_data->self);
-
-  g_child_watch_add (pid, wait_cb, g_steal_pointer (&wait_data));
-
-  g_task_return_int (G_TASK (start_data->task), pid);
+  g_task_return_pointer (task,
+                         g_steal_pointer (&train),
+                         g_object_unref);
 }
 
 
@@ -246,12 +190,13 @@ kgx_simple_tab_start (KgxTab              *page,
                       GAsyncReadyCallback  callback,
                       gpointer             callback_data)
 {
-  KgxSimpleTab *self;
+  g_autoptr (KgxSettings) settings = NULL;
   g_autoptr (VtePty) pty = NULL;
-  g_autoptr (GError) error = NULL;
-  g_auto (GStrv) env = NULL;
-  g_autoptr (StartData) data = NULL;
+  g_autoptr (VteTerminal) terminal = NULL;
+  g_autoptr (StartData) data = start_data_alloc ();
   g_autoptr (GTask) task = NULL;
+  g_autoptr (GError) error = NULL;
+  KgxSimpleTab *self;
 
   g_return_if_fail (KGX_IS_SIMPLE_TAB (page));
 
@@ -263,8 +208,11 @@ kgx_simple_tab_start (KgxTab              *page,
     self->spawn_cancellable = g_cancellable_new ();
   }
 
+  g_set_weak_pointer (&data->self, self);
+
   task = g_task_new (self, self->spawn_cancellable, callback, callback_data);
   g_task_set_source_tag (task, kgx_simple_tab_start);
+  kgx_task_set_start_data (task, g_steal_pointer (&data));
 
   pty = vte_pty_new_sync (VTE_PTY_DEFAULT, self->spawn_cancellable, &error);
   if (error) {
@@ -274,37 +222,30 @@ kgx_simple_tab_start (KgxTab              *page,
     return;
   }
 
-  env = g_environ_setenv (env, "TERM", "xterm-256color", TRUE);
-  env = g_environ_setenv (env, "TERM_PROGRAM", "kgx", TRUE);
-  env = g_environ_setenv (env, "TERM_PROGRAM_VERSION", PACKAGE_VERSION, TRUE);
+  g_object_get (self, "terminal", &terminal, "settings", &settings, NULL);
 
-  vte_terminal_set_pty (VTE_TERMINAL (self->terminal), pty);
+  vte_terminal_set_pty (terminal, pty);
 
-  data = g_new0 (StartData, 1);
-  g_set_weak_pointer (&data->self, self);
-  g_set_object (&data->task, task);
-
-  kgx_proxy_info_apply_to_environ (kgx_proxy_info_get_default (), &env);
-
-  fp_vte_pty_spawn_async (pty,
-                          self->initial_work_dir,
-                          (const char *const *) self->command,
-                          (const char *const *) env,
-                          -1,
-                          self->spawn_cancellable,
-                          (GAsyncReadyCallback) spawned,
-                          g_steal_pointer (&data));
+  kgx_depot_spawn (self->depot,
+                   settings,
+                   pty,
+                   self->initial_work_dir,
+                   (const char *const *) self->command,
+                   (const char *const *) self->environ,
+                   self->spawn_cancellable,
+                   spawned,
+                   g_steal_pointer (&task));
 }
 
 
-static GPid
+static KgxTrain *
 kgx_simple_tab_start_finish (KgxTab        *page,
                              GAsyncResult  *res,
                              GError       **error)
 {
-  g_return_val_if_fail (g_task_is_valid (res, page), 0);
+  g_return_val_if_fail (g_task_is_valid (res, page), NULL);
 
-  return g_task_propagate_int (G_TASK (res), error);
+  return g_task_propagate_pointer (G_TASK (res), error);
 }
 
 
@@ -368,12 +309,20 @@ kgx_simple_tab_class_init (KgxSimpleTabClass *klass)
                         G_TYPE_STRV,
                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
 
+  pspecs[PROP_ENVIRON] =
+    g_param_spec_boxed ("environ", NULL, NULL,
+                        G_TYPE_STRV,
+                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+
+  pspecs[PROP_DEPOT] =
+    g_param_spec_object ("depot", NULL, NULL,
+                         KGX_TYPE_DEPOT,
+                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
 
   gtk_widget_class_set_template_from_resource (widget_class,
                                                KGX_APPLICATION_PATH "kgx-simple-tab.ui");
-
-  gtk_widget_class_bind_template_child (widget_class, KgxSimpleTab, terminal);
 
   gtk_widget_class_bind_template_callback (widget_class, format_tooltip);
 }

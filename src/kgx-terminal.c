@@ -33,8 +33,6 @@
 #define PCRE2_CODE_UNIT_WIDTH 0
 #include <pcre2.h>
 
-#include "rgba.h"
-
 #include "kgx-terminal.h"
 #include "kgx-despatcher.h"
 #include "kgx-settings.h"
@@ -82,8 +80,8 @@ struct _KgxTerminal {
   VteTerminal parent_instance;
 
   KgxSettings   *settings;
-  GSignalGroup  *settings_signals;
   GCancellable  *cancellable;
+  KgxPalette    *palette;
 
   KgxDespatcher *despatcher;
 
@@ -100,9 +98,9 @@ enum {
   PROP_SETTINGS,
   PROP_CANCELLABLE,
   PROP_PATH,
+  PROP_PALETTE,
   LAST_PROP
 };
-
 static GParamSpec *pspecs[LAST_PROP] = { NULL, };
 
 enum {
@@ -126,61 +124,35 @@ kgx_terminal_dispose (GObject *object)
 
   g_clear_object (&self->despatcher);
 
+  g_clear_pointer (&self->palette, kgx_palette_unref);
+
   G_OBJECT_CLASS (kgx_terminal_parent_class)->dispose (object);
 }
 
 
 static void
-update_terminal_colours (KgxTerminal *self)
+kgx_terminal_set_palette (KgxTerminal *self, KgxPalette *palette)
 {
-  KgxTheme resolved_theme;
-  GdkRGBA fg;
-  GdkRGBA bg;
+  GdkRGBA foreground, background;
+  const GdkRGBA *colours;
+  size_t n_colours;
 
-  // Workings of GDK_RGBA prevent this being static
-  GdkRGBA palette[16] = {
-    GDK_RGBA ("241f31"), // Black
-    GDK_RGBA ("c01c28"), // Red
-    GDK_RGBA ("2ec27e"), // Green
-    GDK_RGBA ("f5c211"), // Yellow
-    GDK_RGBA ("1e78e4"), // Blue
-    GDK_RGBA ("9841bb"), // Magenta
-    GDK_RGBA ("0ab9dc"), // Cyan
-    GDK_RGBA ("c0bfbc"), // White
-    GDK_RGBA ("5e5c64"), // Bright Black
-    GDK_RGBA ("ed333b"), // Bright Red
-    GDK_RGBA ("57e389"), // Bright Green
-    GDK_RGBA ("f8e45c"), // Bright Yellow
-    GDK_RGBA ("51a1ff"), // Bright Blue
-    GDK_RGBA ("c061cb"), // Bright Magenta
-    GDK_RGBA ("4fd2fd"), // Bright Cyan
-    GDK_RGBA ("f6f5f4"), // Bright White
-  };
-
-  if (!self->settings) {
+  if (!kgx_set_palette (&self->palette, palette)) {
     return;
   }
 
-  resolved_theme = kgx_settings_get_resolved_theme (self->settings);
+  kgx_palette_get_colours (palette,
+                           &foreground,
+                           &background,
+                           &n_colours,
+                           &colours);
+  vte_terminal_set_colors (VTE_TERMINAL (self),
+                           &foreground,
+                           &background,
+                           colours,
+                           n_colours);
 
-  switch (resolved_theme) {
-    case KGX_THEME_HACKER:
-      fg = (GdkRGBA) { 0.1, 1.0, 0.1, 1.0};
-      bg = (GdkRGBA) { 0.05, 0.05, 0.05, 1.0 };
-      break;
-    case KGX_THEME_DAY:
-      fg = (GdkRGBA) { 0.0, 0.0, 0.0, 0.0 };
-      bg = (GdkRGBA) { 1.0, 1.0, 1.0, 1.0 };
-      break;
-    case KGX_THEME_NIGHT:
-    case KGX_THEME_AUTO:
-    default:
-      fg = (GdkRGBA) { 1.0, 1.0, 1.0, 1.0};
-      bg = (GdkRGBA) { 0.12, 0.12, 0.12, 1.0 };
-      break;
-  }
-
-  vte_terminal_set_colors (VTE_TERMINAL (self), &fg, &bg, palette, 16);
+  g_object_notify_by_pspec (G_OBJECT (self), pspecs[PROP_PALETTE]);
 }
 
 
@@ -195,7 +167,6 @@ kgx_terminal_set_property (GObject      *object,
   switch (property_id) {
     case PROP_SETTINGS:
       if (g_set_object (&self->settings, g_value_get_object (value))) {
-        update_terminal_colours (self);
         g_object_notify_by_pspec (object, pspec);
       }
       break;
@@ -204,10 +175,67 @@ kgx_terminal_set_property (GObject      *object,
         g_object_notify_by_pspec (object, pspec);
       }
       break;
+    case PROP_PALETTE:
+      kgx_terminal_set_palette (self, g_value_get_boxed (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
+}
+
+
+static inline char *
+get_uri_prop (VteTerminal *terminal, const char *prop)
+{
+  g_autoptr (GUri) uri = NULL;
+
+  uri = vte_terminal_ref_termprop_uri (terminal, prop);
+  if (!uri) {
+    return NULL;
+  }
+
+  return g_uri_to_string (uri);
+}
+
+
+static inline char *
+get_file_uri_prop (VteTerminal *terminal)
+{
+  return get_uri_prop (terminal, VTE_TERMPROP_CURRENT_FILE_URI);
+}
+
+
+static inline char *
+get_directory_uri_prop (VteTerminal *terminal)
+{
+  return get_uri_prop (terminal, VTE_TERMPROP_CURRENT_DIRECTORY_URI);
+}
+
+
+static inline char *
+get_either_uri_prop (VteTerminal *terminal)
+{
+  char *res = get_file_uri_prop (terminal);
+
+  if (res) {
+    return res;
+  }
+
+  return get_directory_uri_prop (terminal);
+}
+
+
+static inline GFile *
+get_location (VteTerminal *terminal)
+{
+  g_autofree char *uri = get_either_uri_prop (terminal);
+
+  if (!uri) {
+    return NULL;
+  }
+
+  return g_file_new_for_uri (uri);
 }
 
 
@@ -218,8 +246,6 @@ kgx_terminal_get_property (GObject    *object,
                            GParamSpec *pspec)
 {
   KgxTerminal *self = KGX_TERMINAL (object);
-  const char *uri;
-  g_autoptr (GFile) path = NULL;
 
   switch (property_id) {
     case PROP_SETTINGS:
@@ -229,12 +255,10 @@ kgx_terminal_get_property (GObject    *object,
       g_value_set_object (value, self->cancellable);
       break;
     case PROP_PATH:
-      if ((uri = vte_terminal_get_current_file_uri (VTE_TERMINAL (self)))) {
-        path = g_file_new_for_uri (uri);
-      } else if ((uri = vte_terminal_get_current_directory_uri (VTE_TERMINAL (self)))) {
-        path = g_file_new_for_uri (uri);
-      }
-      g_value_set_object (value, path);
+      g_value_take_object (value, get_location (VTE_TERMINAL (self)));
+      break;
+    case PROP_PALETTE:
+      g_value_set_boxed (value, self->palette);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -250,7 +274,7 @@ have_url_under_pointer (KgxTerminal *self,
 {
   g_autofree char *hyperlink = NULL;
   g_autofree char *match = NULL;
-  int match_id;
+  int match_id = -1;
   gboolean current = FALSE;
 
   hyperlink = vte_terminal_check_hyperlink_at (VTE_TERMINAL (self), x, y);
@@ -261,11 +285,13 @@ have_url_under_pointer (KgxTerminal *self,
   } else {
     match = vte_terminal_check_match_at (VTE_TERMINAL (self), x, y, &match_id);
 
-    for (int i = 0; i < KGX_TERMINAL_N_LINK_REGEX; i++) {
-      if (self->match_id[i] == match_id) {
-        g_set_str (&self->current_url, match);
-        current = TRUE;
-        break;
+    if (match) {
+      for (int i = 0; i < KGX_TERMINAL_N_LINK_REGEX; i++) {
+        if (self->match_id[i] == match_id) {
+          g_set_str (&self->current_url, match);
+          current = TRUE;
+          break;
+        }
       }
     }
   }
@@ -408,12 +434,12 @@ did_show_folder (GObject *source, GAsyncResult *res, gpointer user_data)
 static void
 show_in_files_activated (KgxTerminal *self)
 {
-  const char *uri = NULL;
+  g_autofree char *uri = NULL;
   GtkWindow *parent = GTK_WINDOW (gtk_widget_get_root (GTK_WIDGET (self)));
 
   ensure_despatcher (self);
 
-  uri = vte_terminal_get_current_file_uri (VTE_TERMINAL (self));
+  uri = get_file_uri_prop (VTE_TERMINAL (self));
 
   if (G_UNLIKELY (uri)) {
     kgx_despatcher_show_item (self->despatcher,
@@ -425,7 +451,7 @@ show_in_files_activated (KgxTerminal *self)
     return;
   }
 
-  uri = vte_terminal_get_current_directory_uri (VTE_TERMINAL (self));
+  uri = get_directory_uri_prop (VTE_TERMINAL (self));
 
   if (G_UNLIKELY (!uri)) {
     g_warning ("term.show-in-files: no file");
@@ -509,15 +535,31 @@ kgx_terminal_decrease_font_size (VteTerminal *self)
 }
 
 
+static KgxPalette *
+resolve_livery (KgxTerminal *self,
+                KgxLivery   *livery,
+                gboolean     is_day,
+                gboolean     translucency)
+{
+  return kgx_livery_resolve (livery, is_day, translucency);
+}
+
+
+static gboolean
+enum_is (KgxTerminal *self, int a, int b)
+{
+  return a == b;
+}
+
+
 static void
 location_changed (KgxTerminal *self)
 {
-  gboolean value;
+  g_autofree char *uri = get_either_uri_prop (VTE_TERMINAL (self));
 
-  value = vte_terminal_get_current_file_uri (VTE_TERMINAL (self)) ||
-            vte_terminal_get_current_directory_uri (VTE_TERMINAL (self));
-
-  gtk_widget_action_set_enabled (GTK_WIDGET (self), "term.show-in-files", value);
+  gtk_widget_action_set_enabled (GTK_WIDGET (self),
+                                 "term.show-in-files",
+                                 uri != NULL);
 
   g_object_notify_by_pspec (G_OBJECT (self), pspecs[PROP_PATH]);
 }
@@ -626,6 +668,11 @@ kgx_terminal_class_init (KgxTerminalClass *klass)
                          G_TYPE_FILE,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
+  pspecs[PROP_PALETTE] =
+    g_param_spec_boxed ("palette", NULL, NULL,
+                        KGX_TYPE_PALETTE,
+                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY);
+
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
 
   signals[SIZE_CHANGED] = g_signal_new ("size-changed",
@@ -656,8 +703,8 @@ kgx_terminal_class_init (KgxTerminalClass *klass)
   gtk_widget_class_set_template_from_resource (widget_class,
                                                KGX_APPLICATION_PATH "kgx-terminal.ui");
 
-  gtk_widget_class_bind_template_child (widget_class, KgxTerminal, settings_signals);
-
+  gtk_widget_class_bind_template_callback (widget_class, resolve_livery);
+  gtk_widget_class_bind_template_callback (widget_class, enum_is);
   gtk_widget_class_bind_template_callback (widget_class, location_changed);
   gtk_widget_class_bind_template_callback (widget_class, setup_context_menu);
   gtk_widget_class_bind_template_callback (widget_class, pressed);
@@ -722,10 +769,6 @@ kgx_terminal_init (KgxTerminal *self)
                                         self->match_id[i],
                                         "pointer");
   }
-
-  g_signal_group_connect_swapped (self->settings_signals,
-                                  "notify::resolved-theme", G_CALLBACK (update_terminal_colours),
-                                  self);
 }
 
 
@@ -774,12 +817,10 @@ kgx_terminal_accept_paste (KgxTerminal *self,
 
   if (g_strstr_len (striped, len, "sudo") != NULL &&
       g_strstr_len (striped, len, "\n") != NULL) {
-    KgxPasteDialog *paste = g_object_new (KGX_TYPE_PASTE_DIALOG,
-                                          "content", text,
-                                          "transient-for", gtk_widget_get_root (GTK_WIDGET (self)),
-                                          NULL);
-
-    kgx_paste_dialog_run (paste,
+    kgx_paste_dialog_run (g_object_new (KGX_TYPE_PASTE_DIALOG,
+                                        "content", text,
+                                        NULL),
+                          GTK_WIDGET (self),
                           self->cancellable,
                           got_paste,
                           g_object_ref (self));

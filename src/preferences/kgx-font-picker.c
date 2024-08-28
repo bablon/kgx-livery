@@ -25,7 +25,7 @@
 
 
 struct _KgxFontPicker {
-  AdwWindow              parent_instance;
+  AdwNavigationPage      parent_instance;
 
   PangoFontDescription  *initial;
   PangoFontDescription  *current;
@@ -35,7 +35,7 @@ struct _KgxFontPicker {
 };
 
 
-G_DEFINE_TYPE (KgxFontPicker, kgx_font_picker, ADW_TYPE_WINDOW)
+G_DEFINE_TYPE (KgxFontPicker, kgx_font_picker, ADW_TYPE_NAVIGATION_PAGE)
 
 
 enum {
@@ -45,7 +45,6 @@ enum {
   PROP_CURRENT_FONT,
   LAST_PROP
 };
-
 static GParamSpec *pspecs[LAST_PROP] = { NULL, };
 
 
@@ -145,17 +144,6 @@ build_description (GObject *object, PangoFontFamily *family, double size)
 }
 
 
-static char *
-face_as_label (GObject *object, PangoFontFamily *family)
-{
-  if (!family) {
-    return NULL;
-  }
-
-  return g_strdup (pango_font_family_get_name (family));
-}
-
-
 static PangoAttrList *
 face_as_attributes (GObject *object, PangoFontFamily *family)
 {
@@ -167,14 +155,6 @@ face_as_attributes (GObject *object, PangoFontFamily *family)
   }
 
   return g_steal_pointer (&list);
-}
-
-
-static gboolean
-face_is_terminal (PangoFontFamily *family)
-{
-  /* In future it would be good to exclude emoji fonts */
-  return pango_font_family_is_monospace (family);
 }
 
 
@@ -314,14 +294,12 @@ kgx_font_picker_class_init (KgxFontPickerClass *klass)
                               kgx_marshals_VOID__BOXEDv);
 
   gtk_widget_class_set_template_from_resource (widget_class,
-                                               KGX_APPLICATION_PATH "kgx-font-picker.ui");
+                                               KGX_APPLICATION_PATH "preferences/kgx-font-picker.ui");
 
   gtk_widget_class_bind_template_child (widget_class, KgxFontPicker, selection);
 
   gtk_widget_class_bind_template_callback (widget_class, build_description);
-  gtk_widget_class_bind_template_callback (widget_class, face_as_label);
   gtk_widget_class_bind_template_callback (widget_class, face_as_attributes);
-  gtk_widget_class_bind_template_callback (widget_class, face_is_terminal);
   gtk_widget_class_bind_template_callback (widget_class, font_as_attributes);
   gtk_widget_class_bind_template_callback (widget_class, font_as_size);
   gtk_widget_class_bind_template_callback (widget_class, pending_as_sensitive);

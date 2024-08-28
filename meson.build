@@ -1,5 +1,5 @@
 project('gnome-console', 'c',
-                  version: '46.0',
+                  version: '47.beta',
             meson_version: '>= 0.59.0',
                   license: 'GPL-3.0-or-later',
           default_options: [
@@ -57,9 +57,13 @@ conf.set_quoted('KGX_APPLICATION_ID', app_id)
 conf.set('KGX_APPLICATION_ID_RAW', app_id)
 conf.set_quoted('KGX_APPLICATION_PATH', app_path)
 conf.set('KGX_APPLICATION_PATH_RAW', app_path)
+conf.set_quoted('KGX_LIVERY_UUID_KGX', '9f1374fd-f199-429f-bae6-9cf1260f6e3e')
+conf.set_quoted('KGX_LIVERY_UUID_LINUX', '131b4aac-399b-4ee4-a8e1-f22e5c3c7bdd')
+conf.set_quoted('KGX_LIVERY_UUID_XTERM', '54156855-4a0d-454a-9d5a-7d3e2c9f26f5')
 conf.set_quoted('LOCALEDIR', prefix / get_option('localedir'))
 conf.set('BIN_DIR', prefix / bindir)
 conf.set('BIN_NAME', bin_name)
+conf.set_quoted('KGX_BIN_NAME', bin_name)
 conf.set('IS_DEVEL', get_option('devel'))
 
 config_h_in = configure_file(
@@ -71,16 +75,27 @@ config_h = vcs_tag( input: config_h_in,
                   command: ['git', 'rev-parse', '--short', 'HEAD'],
                  fallback: 'Devel')
 
-gtk_ver = 'GDK_VERSION_4_12'
-glib_ver = 'GLIB_VERSION_2_76'
+# Gtk Requirement
+gtk_min_ver = '4.14'
+gtk_sym_ver = 'GDK_VERSION_@0@'.format(gtk_min_ver.replace('.', '_'))
+
+# GLib Requirement
+glib_min_ver = '2.80'
+glib_sym_ver = 'GLIB_VERSION_@0@'.format(glib_min_ver.replace('.', '_'))
+
+# Adwaita Requirement
+adw_min_ver = '1.6'
+adw_sym_ver = 'ADW_VERSION_@0@'.format(adw_min_ver.replace('.', '_'))
 
 kgx_cargs = [
   '-DG_LOG_DOMAIN="@0@"'.format(log_domain),
   '-DG_LOG_USE_STRUCTURED',
-  '-DGLIB_VERSION_MIN_REQUIRED=@0@'.format(glib_ver),
-  '-DGLIB_VERSION_MAX_ALLOWED=@0@'.format(glib_ver),
-  '-DGDK_VERSION_MIN_REQUIRED=@0@'.format(gtk_ver),
-  '-DGDK_VERSION_MAX_ALLOWED=@0@'.format(gtk_ver)
+  '-DGLIB_VERSION_MIN_REQUIRED=@0@'.format(glib_sym_ver),
+  '-DGLIB_VERSION_MAX_ALLOWED=@0@'.format(glib_sym_ver),
+  '-DGDK_VERSION_MIN_REQUIRED=@0@'.format(gtk_sym_ver),
+  '-DGDK_VERSION_MAX_ALLOWED=@0@'.format(gtk_sym_ver),
+  '-DADW_VERSION_MIN_REQUIRED=@0@'.format(adw_sym_ver),
+  '-DADW_VERSION_MAX_ALLOWED=@0@'.format(adw_sym_ver),
 ]
 
 cc = meson.get_compiler('c')
@@ -127,11 +142,12 @@ endif
 
 add_project_arguments(global_cargs, language: 'c')
 
-gio_dep = dependency('gio-2.0', version: '>= 2.76')
-gio_unix_dep = dependency('gio-unix-2.0', version: '>= 2.76')
-adw_dep = dependency('libadwaita-1', version: '>= 1.4.alpha')
-vte_dep = dependency('vte-2.91-gtk4', version: '>= 0.75.1')
-gtk_dep = dependency('gtk4', version: '>= 4.12.2')
+gio_dep = dependency('gio-2.0', version: '>= @0@'.format(glib_min_ver))
+gio_unix_dep = dependency('gio-unix-2.0', version: '>= @0@'.format(glib_min_ver))
+pango_dep = dependency('pango', version: '>= 1.51.2')
+adw_dep = dependency('libadwaita-1', version: '>= @0@'.format(adw_min_ver))
+vte_dep = dependency('vte-2.91-gtk4', version: '>= 0.77.0')
+gtk_dep = dependency('gtk4', version: '>= @0@'.format(gtk_min_ver))
 gtop_dep = dependency('libgtop-2.0')
 pcre_dep = dependency('libpcre2-8', version: '>= 10.32')
 schemas_dep = dependency('gsettings-desktop-schemas')
@@ -139,6 +155,7 @@ schemas_dep = dependency('gsettings-desktop-schemas')
 subdir('data')
 subdir('src')
 subdir('po')
+subdir('tests')
 
 gnome.post_install(
      glib_compile_schemas: true,

@@ -18,9 +18,114 @@
 
 #pragma once
 
-#include <glib.h>
+#include <glib-object.h>
 
 G_BEGIN_DECLS
+
+
+/**
+ * KGX_DEFINE_DATA:
+ * @TypeName: the struct name
+ * @type_name: the method prefix
+ *
+ * Defines a autocleanup'd struct, methods to allocate and free it, and some
+ * utilities for using it with a GTask.
+ *
+ * Requires a struct defined as `struct _TypeName` and a `type_name_cleanup`
+ * function that clears the content of the struct (but not free the struct
+ * itself).
+ */
+#define KGX_DEFINE_DATA(TypeName, type_name)                                 \
+  typedef struct _##TypeName TypeName;                                       \
+  static inline void type_name##_cleanup (TypeName *self);                   \
+  static inline void                                                         \
+  type_name##_free (gpointer data)                                           \
+  {                                                                          \
+    type_name##_cleanup (data);                                              \
+    g_free (data);                                                           \
+  }                                                                          \
+  static inline TypeName *type_name##_alloc (void) G_GNUC_MALLOC;            \
+  static inline TypeName *                                                   \
+  type_name##_alloc (void)                                                   \
+  {                                                                          \
+    return g_new0 (TypeName, 1);                                             \
+  }                                                                          \
+  static inline void                                                         \
+  kgx_task_set_##type_name (GTask *restrict task, TypeName *restrict data)   \
+  {                                                                          \
+    g_task_set_task_data (task, data, type_name##_free);                     \
+  }                                                                          \
+  static inline TypeName *                                                   \
+  kgx_task_get_##type_name (GTask *task)                                     \
+  {                                                                          \
+    return g_task_get_task_data (task);                                      \
+  }                                                                          \
+  static inline void                                                         \
+  clear_##type_name (TypeName **ptr)                                         \
+  {                                                                          \
+    g_clear_pointer (ptr, type_name##_free);                                 \
+  }                                                                          \
+  G_DEFINE_AUTOPTR_CLEANUP_FUNC (TypeName, type_name##_free)
+
+
+/**
+ * kgx_set_boolean_prop:
+ * @object: the #GObject the property is on
+ * @pspec: the #GParamSpec being set
+ * @target: the storage on @object for @pspec
+ * @value: the potential new value for @target
+ *
+ * Update a boolean property, notifying if the value changed
+ *
+ * Returns: %TRUE if the value changed, otherwise %FALSE
+ */
+static inline gboolean
+kgx_set_boolean_prop (GObject      *restrict object,
+                      GParamSpec   *restrict pspec,
+                      gboolean     *restrict target,
+                      const GValue *restrict value)
+{
+  gboolean new_value = g_value_get_boolean (value);
+
+  if (new_value == *target) {
+    return FALSE;
+  }
+
+  *target = new_value;
+  g_object_notify_by_pspec (object, pspec);
+
+  return TRUE;
+}
+
+
+/**
+ * kgx_set_int64_prop:
+ * @object: the #GObject the property is on
+ * @pspec: the #GParamSpec being set
+ * @target: the storage on @object for @pspec
+ * @value: the potential new value for @target
+ *
+ * Update an int64 property, notifying if the value changed
+ *
+ * Returns: %TRUE if the value changed, otherwise %FALSE
+ */
+static inline gboolean
+kgx_set_int64_prop (GObject      *restrict object,
+                    GParamSpec   *restrict pspec,
+                    int64_t      *restrict target,
+                    const GValue *restrict value)
+{
+  int64_t new_value = g_value_get_int64 (value);
+
+  if (new_value == *target) {
+    return FALSE;
+  }
+
+  *target = new_value;
+  g_object_notify_by_pspec (object, pspec);
+
+  return TRUE;
+}
 
 
 /**
@@ -29,8 +134,8 @@ G_BEGIN_DECLS
  * @source: the text to read from
  * @max_len: the maximum length @buffer should expand to
  *
- * Writes @source to @buffer, but stopping if we reach @max_len, at which point
- * an elipsis is added and we bail out. UTF-8 aware.
+ * Writes @source to @buffer, but stopping if @buffer reachs @max_len bytes,
+ * at which point an elipsis is added and we bail out. UTF-8 aware.
  *
  * Returns: %TRUE if @max_len was reached, otherwise %FALSE
  */
@@ -73,7 +178,7 @@ kgx_str_constrained_dup (const char *source, size_t max_len)
   g_autoptr (GString) buffer = NULL;
   size_t source_len = strlen (source);
 
-  if (G_LIKELY (source_len < max_len - 1)) {
+  if (G_LIKELY (source_len < max_len)) {
     return g_strdup (source);
   }
 
@@ -83,5 +188,21 @@ kgx_str_constrained_dup (const char *source, size_t max_len)
 
   return g_string_free (g_steal_pointer (&buffer), FALSE);
 }
+
+
+typedef enum /*< enum,prefix=KGX >*/ {
+  KGX_ARGUMENT_ERROR_BOTH,
+  KGX_ARGUMENT_ERROR_MISSING,
+} KgxArgumentError;
+
+
+#define KGX_ARGUMENT_ERROR (kgx_argument_error_quark ())
+
+
+GQuark          kgx_argument_error_quark   (void);
+void            kgx_filter_arguments       (GStrv             *arguments,
+                                            GStrv             *command,
+                                            GError           **error);
+
 
 G_END_DECLS

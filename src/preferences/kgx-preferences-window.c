@@ -21,13 +21,14 @@
 
 #include <glib/gi18n.h>
 
-#include "kgx-settings.h"
 #include "kgx-font-picker.h"
+#include "kgx-settings.h"
+
 #include "kgx-preferences-window.h"
 
 
 struct _KgxPreferencesWindow {
-  AdwPreferencesWindow  parent_instance;
+  AdwPreferencesDialog  parent_instance;
 
   KgxSettings          *settings;
   GBindingGroup        *settings_binds;
@@ -36,10 +37,13 @@ struct _KgxPreferencesWindow {
   GtkWidget            *visual_bell;
   GtkWidget            *use_system_font;
   GtkWidget            *custom_font;
+  GtkWidget            *unlimited_scrollback;
+  GtkWidget            *scrollback;
+  GtkWidget            *flow_control;
 };
 
 
-G_DEFINE_TYPE (KgxPreferencesWindow, kgx_preferences_window, ADW_TYPE_PREFERENCES_WINDOW)
+G_DEFINE_TYPE (KgxPreferencesWindow, kgx_preferences_window, ADW_TYPE_PREFERENCES_DIALOG)
 
 
 enum {
@@ -133,7 +137,7 @@ font_selected (KgxFontPicker        *picker,
 {
   kgx_settings_set_custom_font (self->settings, font);
 
-  gtk_window_destroy (GTK_WINDOW (picker));
+  adw_preferences_dialog_pop_subpage (ADW_PREFERENCES_DIALOG (self));
 }
 
 
@@ -144,15 +148,18 @@ select_font_activated (GtkWidget  *widget,
 {
   KgxPreferencesWindow *self = KGX_PREFERENCES_WINDOW (widget);
   g_autoptr (PangoFontDescription) initial_value = NULL;
+  AdwNavigationPage *picker;
 
   initial_value = kgx_settings_get_custom_font (self->settings);
 
-  gtk_window_present (g_object_connect (g_object_new (KGX_TYPE_FONT_PICKER,
-                                                      "transient-for", self,
-                                                      "initial-font", initial_value,
-                                                      NULL),
-                                        "object-signal::selected", G_CALLBACK (font_selected), self,
-                                        NULL));
+  picker = g_object_connect (g_object_new (KGX_TYPE_FONT_PICKER,
+                                           "initial-font", initial_value,
+                                           NULL),
+                             "object-signal::selected", G_CALLBACK (font_selected), self,
+                             NULL);
+
+  adw_preferences_dialog_push_subpage (ADW_PREFERENCES_DIALOG (self),
+                                       picker);
 }
 
 
@@ -174,13 +181,16 @@ kgx_preferences_window_class_init (KgxPreferencesWindowClass *klass)
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
 
   gtk_widget_class_set_template_from_resource (widget_class,
-                                               KGX_APPLICATION_PATH "kgx-preferences-window.ui");
+                                               KGX_APPLICATION_PATH "preferences/kgx-preferences-window.ui");
 
   gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, settings_binds);
   gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, audible_bell);
   gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, visual_bell);
   gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, use_system_font);
   gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, custom_font);
+  gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, unlimited_scrollback);
+  gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, scrollback);
+  gtk_widget_class_bind_template_child (widget_class, KgxPreferencesWindow, flow_control);
 
   gtk_widget_class_bind_template_callback (widget_class, font_as_attributes);
   gtk_widget_class_bind_template_callback (widget_class, font_as_label);
@@ -206,4 +216,15 @@ kgx_preferences_window_init (KgxPreferencesWindow *self)
   g_binding_group_bind (self->settings_binds, "use-system-font",
                         self->use_system_font, "active",
                         G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  g_binding_group_bind (self->settings_binds, "ignore-scrollback-limit",
+                        self->unlimited_scrollback, "active",
+                        G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+  g_binding_group_bind (self->settings_binds, "scrollback-limit",
+                        self->scrollback, "value",
+                        G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  g_binding_group_bind (self->settings_binds, "software-flow-control",
+                        self->flow_control, "active",
+                        G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL | G_BINDING_INVERT_BOOLEAN);
 }

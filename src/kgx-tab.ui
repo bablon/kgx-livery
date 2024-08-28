@@ -2,6 +2,21 @@
 <interface>
   <requires lib="gtk" version="4.0" />
   <template class="KgxTab" parent="AdwBin">
+    <binding name="tab-status">
+      <lookup name="status">
+        <lookup name="train">KgxTab</lookup>
+      </lookup>
+    </binding>
+    <binding name="tab-title">
+      <lookup name="window-title">
+        <lookup name="terminal">KgxTab</lookup>
+      </lookup>
+    </binding>
+    <binding name="tab-path">
+      <lookup name="path">
+        <lookup name="terminal">KgxTab</lookup>
+      </lookup>
+    </binding>
     <property name="dropping" bind-source="drop_target" bind-property="active" />
     <property name="child">
       <object class="GtkBox">
@@ -58,20 +73,31 @@
               <object class="GtkStack" id="stack">
                 <child>
                   <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">16</property>
                     <style>
                       <class name="empty-state" />
                     </style>
                     <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">org.gnome.Console-symbolic</property>
+                        <property name="pixel-size">128</property>
+                        <property name="vexpand">true</property>
+                        <property name="valign">end</property>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkRevealer" id="spinner_revealer">
-                        <property name="hexpand">True</property>
+                        <property name="vexpand">true</property>
+                        <property name="valign">start</property>
                         <property name="transition-type">crossfade</property>
                         <property name="transition-duration">1000</property>
                         <property name="child">
-                          <object class="GtkSpinner">
-                            <signal name="map" handler="spinner_mapped" swapped="no" />
-                            <signal name="unmap" handler="spinner_unmapped" swapped="no" />
+                          <object class="AdwSpinner">
                             <property name="valign">center</property>
                             <property name="halign">center</property>
+                            <property name="width-request">32</property>
+                            <property name="height-request">32</property>
                           </object>
                         </property>
                       </object>
@@ -101,12 +127,13 @@
       </object>
     </property>
   </template>
+  <object class="GSignalGroup" id="train_signals">
+    <property name="target-type">KgxTrain</property>
+    <property name="target" bind-source="KgxTab" bind-property="train" bind-flags="sync-create" />
+  </object>
   <object class="GSignalGroup" id="terminal_signals">
     <property name="target-type">KgxTerminal</property>
     <property name="target" bind-source="KgxTab" bind-property="terminal" bind-flags="sync-create" />
-  </object>
-  <object class="GBindingGroup" id="terminal_binds">
-    <property name="source" bind-source="KgxTab" bind-property="terminal" bind-flags="sync-create" />
   </object>
   <object class="KgxDropTarget" id="drop_target">
     <signal name="drop" handler="drop" swapped="no" />
