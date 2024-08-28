@@ -4,6 +4,7 @@
     <value nick="auto" value="0"/>
     <value nick="night" value="1"/>
     <value nick="day" value="2"/>
+    <!-- Deprecated: Interpreted as ‘night’ -->
     <value nick="hacker" value="3"/>
   </enum>
 
@@ -24,6 +25,9 @@
     <key name="shell" type="as">
       <default>[]</default>
     </key>
+    <key name="ignore-scrollback-limit" type="b">
+      <default>false</default>
+    </key>
     <key name="scrollback-lines" type="x">
       <default>10000</default>
     </key>
@@ -41,6 +45,18 @@
     </key>
     <key name="visual-bell" type="b">
       <default>true</default>
+    </key>
+    <key name="software-flow-control" type="b">
+      <default>false</default>
+    </key>
+    <key name="transparency" type="b">
+      <default>false</default>
+    </key>
+    <key name="livery" type="s">
+      <default>@KGX_LIVERY_UUID_KGX@</default>
+    </key>
+    <key name="custom-liveries" type="a{sv}">
+      <default>{}</default>
     </key>
   </schema>
 </schemalist>

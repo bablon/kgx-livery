@@ -1,6 +1,6 @@
 /* kgx-tab.h
  *
- * Copyright 2019-2023 Zander Brown
+ * Copyright 2019-2024 Zander Brown
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,29 +20,10 @@
 
 #include <adwaita.h>
 
-#include "kgx-terminal.h"
 #include "kgx-process.h"
-#include "kgx-enums.h"
+#include "kgx-train.h"
 
 G_BEGIN_DECLS
-
-
-/**
- * KgxStatus:
- * @KGX_NONE: It's a regular #KgxTab
- * @KGX_REMOTE: The #KgxTab is connected to a "remote" session
- * @KGX_PRIVILEGED: The #KgxTab is running as someone other than the current
- *                  user
- *
- * Indicates the status of the session the #KgxTab represents
- *
- * Stability: Private
- */
-typedef enum /*< flags,prefix=KGX >*/ {
-  KGX_NONE = 0,              /*< nick=none >*/
-  KGX_REMOTE = (1 << 0),     /*< nick=remote >*/
-  KGX_PRIVILEGED = (1 << 1), /*< nick=privileged >*/
-} KgxStatus;
 
 
 #ifndef __GTK_DOC_IGNORE__
@@ -64,12 +45,12 @@ G_DECLARE_DERIVABLE_TYPE (KgxTab, kgx_tab, KGX, TAB, AdwBin)
 struct _KgxTabClass {
   AdwBinClass parent;
 
-  void (*start)        (KgxTab               *tab,
-                        GAsyncReadyCallback   callback,
-                        gpointer              callback_data);
-  GPid (*start_finish) (KgxTab               *tab,
-                        GAsyncResult         *res,
-                        GError              **error);
+  void         (*start)            (KgxTab               *tab,
+                                    GAsyncReadyCallback   callback,
+                                    gpointer              callback_data);
+  KgxTrain   * (*start_finish)     (KgxTab               *tab,
+                                    GAsyncResult         *res,
+                                    GError              **error);
 
   void (*died)         (KgxTab               *self,
                         GtkMessageType        type,
@@ -83,7 +64,7 @@ guint       kgx_tab_get_id           (KgxTab               *self);
 void        kgx_tab_start            (KgxTab               *self,
                                       GAsyncReadyCallback   callback,
                                       gpointer              callback_data);
-GPid        kgx_tab_start_finish     (KgxTab               *self,
+void        kgx_tab_start_finish     (KgxTab               *self,
                                       GAsyncResult         *res,
                                       GError              **error);
 void        kgx_tab_died             (KgxTab               *self,
@@ -92,10 +73,6 @@ void        kgx_tab_died             (KgxTab               *self,
                                       gboolean              success);
 void        kgx_tab_bell              (KgxTab               *self);
 KgxPages   *kgx_tab_get_pages        (KgxTab               *self);
-void        kgx_tab_push_child       (KgxTab               *self,
-                                      KgxProcess           *process);
-void        kgx_tab_pop_child        (KgxTab               *self,
-                                      KgxProcess           *process);
 gboolean    kgx_tab_is_active        (KgxTab               *self);
 GPtrArray  *kgx_tab_get_children     (KgxTab               *self);
 void        kgx_tab_extra_drop       (KgxTab               *self,
@@ -103,5 +80,7 @@ void        kgx_tab_extra_drop       (KgxTab               *self,
 void        kgx_tab_set_initial_title (KgxTab              *self,
                                        const char          *title,
                                        GFile               *path);
+void        kgx_tab_mark_working      (KgxTab              *self);
+void        kgx_tab_unmark_working    (KgxTab              *self);
 
 G_END_DECLS

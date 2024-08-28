@@ -21,11 +21,14 @@
 #include <glib/gi18n.h>
 
 #include "kgx-close-dialog.h"
-#include "kgx-pages.h"
-#include "kgx-tab.h"
-#include "kgx-settings.h"
 #include "kgx-marshals.h"
+#include "kgx-settings.h"
+#include "kgx-tab.h"
+#include "kgx-terminal.h"
+#include "kgx-train.h"
+#include "kgx-utils.h"
 
+#include "kgx-pages.h"
 
 /**
  * KgxPages:
@@ -192,16 +195,16 @@ kgx_pages_set_property (GObject      *object,
       }
       break;
     case PROP_IS_ACTIVE:
-      priv->is_active = g_value_get_boolean (value);
+      kgx_set_boolean_prop (object, pspec, &priv->is_active, value);
       break;
     case PROP_STATUS:
       priv->page_status = g_value_get_flags (value);
       break;
     case PROP_SEARCH_MODE_ENABLED:
-      priv->search_mode_enabled = g_value_get_boolean (value);
+      kgx_set_boolean_prop (object, pspec, &priv->search_mode_enabled, value);
       break;
     case PROP_RINGING:
-      priv->ringing = g_value_get_boolean (value);
+      kgx_set_boolean_prop (object, pspec, &priv->ringing, value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -354,29 +357,21 @@ create_window (AdwTabView *view,
 }
 
 
-typedef struct {
+struct _CloseData {
   AdwTabView *view;
   AdwTabPage *page;
-} CloseData;
+};
 
 
-static void
-close_data_free (gpointer data)
+KGX_DEFINE_DATA (CloseData, close_data)
+
+
+static inline void
+close_data_cleanup (CloseData *self)
 {
-  CloseData *self = data;
-
-  if (!self) {
-    return;
-  }
-
   g_clear_object (&self->view);
   g_clear_weak_pointer (&self->page);
-
-  g_free (self);
 }
-
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (CloseData, close_data_free)
 
 
 static void
@@ -414,7 +409,7 @@ close_page (AdwTabView *view,
             AdwTabPage *page,
             KgxPages   *self)
 {
-  g_autoptr (CloseData) data = g_new0 (CloseData, 1);
+  g_autoptr (CloseData) data = close_data_alloc ();
   g_autoptr (GPtrArray) children = NULL;
   g_autoptr (GCancellable) cancellable = NULL;
   KgxCloseDialog *dlg = NULL;
@@ -430,7 +425,6 @@ close_page (AdwTabView *view,
   dlg = g_object_new (KGX_TYPE_CLOSE_DIALOG,
                       "context", KGX_CONTEXT_TAB,
                       "commands", children,
-                      "transient-for", gtk_widget_get_root (GTK_WIDGET (self)),
                       NULL);
 
   /* slightly paranoid */
@@ -439,7 +433,11 @@ close_page (AdwTabView *view,
 
   g_object_get (tab, "cancellable", &cancellable, NULL);
 
-  kgx_close_dialog_run (dlg, cancellable, got_close, g_steal_pointer (&data));
+  kgx_close_dialog_run (dlg,
+                        GTK_WIDGET (self),
+                        cancellable,
+                        got_close,
+                        g_steal_pointer (&data));
 
   return GDK_EVENT_STOP; // Block the close
 }
@@ -526,7 +524,7 @@ ringing_to_icon (GBinding     *binding,
                  gpointer      user_data)
 {
   if (g_value_get_boolean (from_value)) {
-    g_value_take_object (to_value, g_themed_icon_new ("bell-outline"));
+    g_value_take_object (to_value, g_themed_icon_new ("bell-outline-symbolic"));
   } else {
     g_value_set_object (to_value, NULL);
   }
@@ -636,7 +634,7 @@ kgx_pages_class_init (KgxPagesClass *klass)
   pspecs[PROP_IS_ACTIVE] =
     g_param_spec_boolean ("is-active", NULL, NULL,
                           FALSE,
-                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                          G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
   pspecs[PROP_STATUS] =
     g_param_spec_flags ("status", NULL, NULL,
@@ -647,12 +645,12 @@ kgx_pages_class_init (KgxPagesClass *klass)
   pspecs[PROP_SEARCH_MODE_ENABLED] =
     g_param_spec_boolean ("search-mode-enabled", NULL, NULL,
                           FALSE,
-                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                          G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
   pspecs[PROP_RINGING] =
     g_param_spec_boolean ("ringing", NULL, NULL,
                           FALSE,
-                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                          G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
 
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
@@ -774,6 +772,7 @@ kgx_pages_add_page (KgxPages *self,
                                tab, NULL);
   g_object_bind_property (tab, "tab-tooltip", page, "tooltip", G_BINDING_SYNC_CREATE);
   g_object_bind_property (tab, "needs-attention", page, "needs-attention", G_BINDING_SYNC_CREATE);
+  g_object_bind_property (tab, "working", page, "loading", G_BINDING_SYNC_CREATE);
   g_object_bind_property_full (tab, "tab-status", page, "icon", G_BINDING_SYNC_CREATE,
                                status_to_icon, NULL, NULL, NULL);
   g_object_bind_property_full (tab, "tab-path", page, "keyword", G_BINDING_SYNC_CREATE,

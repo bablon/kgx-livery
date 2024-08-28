@@ -1,35 +1,49 @@
-@define-color root_headerbar_bg_color       shade(@red_1, 1.48);
-@define-color root_headerbar_backdrop_color shade(@red_1, 1.45);
-
-@define-color remote_headerbar_bg_color       shade(@purple_1, 1.27);
-@define-color remote_headerbar_backdrop_color shade(@purple_1, 1.35);
+:root {
+  --headerbar-bg-oklch: 0.95 calc(c * 0.3) h;
+  --headerbar-backdrop-oklch: 0.9 calc(c * 0.25) h;
+  --headerbar-bell-oklch: 1 c h;
+  --system-accent: var(--accent-bg-color);
+}
 
 @keyframes bell {
-  50% { background-color: shade(@orange_1, 1.1); }
+  50% {
+    background-color: oklch(from var(--accent-orange) var(--headerbar-bell-oklch));
+  }
 }
 
 kgx-tab .top-bar {
   background-image: none;
-  background-color: @view_bg_color;
+  background-color: var(--view-bg-color);
+  color: var(--view-fg-color);
 }
 
-.terminal-window.root .main-box > revealer.top-bar {
-  background-color: @root_headerbar_bg_color;
+.terminal-window.translucent {
+  background: transparent;
 }
 
-.terminal-window.root:backdrop .main-box > revealer.top-bar {
-  background-color: @root_headerbar_backdrop_color;
+.terminal-window.root {
+  --headerbar-bg-color: oklch(from var(--accent-red) var(--headerbar-bg-oklch));
+  --headerbar-backdrop-color: oklch(from var(--accent-red) var(--headerbar-backdrop-oklch));
 }
 
-.terminal-window.remote .main-box > revealer.top-bar {
-  background-color: @remote_headerbar_bg_color;
+.terminal-window.remote {
+  --headerbar-bg-color: oklch(from var(--accent-purple) var(--headerbar-bg-oklch));
+  --headerbar-backdrop-color: oklch(from var(--accent-purple) var(--headerbar-backdrop-oklch));
 }
 
-.terminal-window.remote:backdrop .main-box > revealer.top-bar {
-  background-color: @remote_headerbar_backdrop_color;
+.terminal-window.root .top-bar.raised,
+.terminal-window.remote .top-bar.raised {
+  --accent-bg-color: color-mix(in srgb, currentColor 75%, transparent);
+  --accent-color: oklab(from var(--accent-bg-color) var(--standalone-color-oklab));
 }
 
-.terminal-window.bell .main-box > revealer.top-bar {
+.terminal-window.root .top-bar.raised popover,
+.terminal-window.remote .top-bar.raised popover {
+  --accent-bg-color: var(--system-accent);
+  --accent-color: oklab(from var(--accent-bg-color) var(--standalone-color-oklab));
+}
+
+.terminal-window.bell .top-bar.raised {
   animation: bell 0.5s ease-out;
 }
 
@@ -40,44 +54,28 @@ kgx-tab .top-bar {
 
 /* Taken from nautilus */
 .floating-bar {
-  padding: 6px;
-  background-color: @window_bg_color;
-  color: @view_fg_color;
-  box-shadow: 0 0 0 1px @borders;
-  margin-top: 1px;
+  padding: 3px 8px;
+  background-color: var(--view-bg-color);
+  color: var(--view-fg-color);
+  box-shadow: inset 0 100px 0 0 color-mix(in srgb, currentColor 5%, transparent);
+  margin: 4px;
+  border-radius: 8px;
 }
 
-.floating-bar:dir(rtl) {
-  border-top-right-radius: 6px;
-  margin-right: 1px;
-}
-
-.floating-bar:dir(ltr) {
-  border-top-left-radius: 6px;
-  margin-left: 1px;
+.floating-bar:backdrop {
+  opacity: 0.7;
 }
 
 /* Sync to KgxTerminal! */
 .empty-state {
-  background: @view_bg_color;
-  color: alpha(currentColor, .5);
+  background: var(--view-bg-color);
+  color: color-mix(in srgb, var(--view-fg-color) var(--dim-opacity), transparent);
 }
 
 .exit-info {
   padding: 6px;
-  border-top: 2px solid #1e78e4;
-  background: rgba(13, 54, 104, 0.96);
-  color: #ffffff;
-}
-
-.error .exit-info {
-  border-top: 2px solid #ed333b;
-  background: rgba(104, 13, 13, 0.96);
-}
-
-window:not(.tiled):not(.tiled-top):not(.tiled-bottom):not(.tiled-left):not(.tiled-right):not(.fullscreen):not(.maximized):not(.solid-csd) {
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  border-top: 2px solid var(--accent-bg-color);
+  background: oklch(from var(--accent-bg-color) l calc(c * 2) h / 20%);
 }
 
 .process-list row .header {
@@ -93,8 +91,8 @@ themeswitcher {
 }
 
 themeswitcher .check {
-  background: @accent_bg_color;
-  color: @accent_fg_color;
+  background: var(--accent-bg-color);
+  color: var(--accent-fg-color);
   padding: 2px;
   border-radius: 17px;
   margin: 3px;
@@ -116,25 +114,26 @@ themeswitcher checkbutton radio {
   border: none;
   outline-color: currentColor;
   transition: none;
-  box-shadow: inset 0 0 0 1px @borders;
+  box-shadow: inset 0 0 0 1px var(--border-color);
+
+  --light-bg: white;
+  --dark-bg: #1e1e1e;
 }
 
 themeswitcher checkbutton radio:checked {
-  box-shadow: inset 0 0 0 2px @accent_bg_color;
+  box-shadow: inset 0 0 0 2px var(--accent-bg-color);
 }
 
 themeswitcher checkbutton.system radio {
-  background: linear-gradient(-45deg, #1e1e1e 49.99%, white 50.01%);
+  background: linear-gradient(-45deg, var(--dark-bg) 49.99%, var(--light-bg) 50.01%);
 }
 
 themeswitcher checkbutton.light radio {
-  color: alpha(black, .8);
-  background-color: white;
+  background-color: var(--light-bg);
 }
 
 themeswitcher checkbutton.dark radio {
-  color: white;
-  background-color: #1e1e1e;
+  background-color: var(--dark-bg);
 }
 
 .font-picker {
@@ -154,6 +153,6 @@ kgx-tab:drop(active) {
 /* Drag overlay */
 .drop-highlight {
   border-radius: 8px;
-  background-color: alpha(@blue_2, 0.35);
+  background-color: color-mix(in srgb, var(--accent-bg-color) 35%, transparent);
   margin: 24px;
 }

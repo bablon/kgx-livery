@@ -22,6 +22,7 @@
 #include <pango/pango.h>
 
 #include "kgx-enums.h"
+#include "kgx-livery.h"
 
 G_BEGIN_DECLS
 
@@ -32,7 +33,7 @@ G_BEGIN_DECLS
  *                  the user's global setting
  * @KGX_THEME_NIGHT: The default, dark, theme
  * @KGX_THEME_DAY: Alternate, light, theme
- * @KGX_THEME_HACKER: Little easter egg theme
+ * @KGX_THEME_HACKER: Legacy alias for night
  *
  * Until [meson#1687](https://github.com/mesonbuild/meson/issues/1687) is
  * resolved this enum must be manually kept in sync with
@@ -72,15 +73,14 @@ typedef enum /*< enum,prefix=KGX >*/ {
 G_DECLARE_FINAL_TYPE (KgxSettings, kgx_settings, KGX, SETTINGS, GObject)
 
 KgxTheme              kgx_settings_get_resolved_theme     (KgxSettings           *self);
-PangoFontDescription *kgx_settings_get_font          (KgxSettings       *self);
 void                  kgx_settings_increase_scale    (KgxSettings       *self);
 void                  kgx_settings_decrease_scale    (KgxSettings       *self);
 void                  kgx_settings_reset_scale       (KgxSettings       *self);
 GStrv                 kgx_settings_get_shell         (KgxSettings       *self);
 void                  kgx_settings_set_custom_shell  (KgxSettings       *self,
                                                       const char *const *shell);
-void                  kgx_settings_set_scrollback    (KgxSettings       *self,
-                                                      int64_t            value);
+void                  kgx_settings_set_scrollback_limit (KgxSettings       *self,
+                                                         int64_t            value);
 gboolean              kgx_settings_get_restore_size  (KgxSettings       *self);
 void                  kgx_settings_get_size             (KgxSettings       *self,
                                                          int               *width,
@@ -91,16 +91,13 @@ void                  kgx_settings_set_custom_size      (KgxSettings       *self
                                                          int                height,
                                                          gboolean           maximised);
 gboolean              kgx_settings_get_audible_bell  (KgxSettings       *self);
-void                  kgx_settings_set_audible_bell  (KgxSettings       *self,
-                                                      gboolean           audible_bell);
 gboolean              kgx_settings_get_visual_bell   (KgxSettings       *self);
-void                  kgx_settings_set_visual_bell   (KgxSettings       *self,
-                                                      gboolean           visual_bell);
-gboolean              kgx_settings_get_use_system_font  (KgxSettings           *self);
-void                  kgx_settings_set_use_system_font  (KgxSettings           *self,
-                                                         gboolean               use_system_font);
 PangoFontDescription *kgx_settings_get_custom_font      (KgxSettings           *self);
 void                  kgx_settings_set_custom_font      (KgxSettings           *self,
                                                          PangoFontDescription  *custom_font);
+gboolean              kgx_settings_get_software_flow_control (KgxSettings      *self);
+KgxLivery            *kgx_settings_get_livery                (KgxSettings           *self);
+void                  kgx_settings_set_livery                (KgxSettings           *self,
+                                                              KgxLivery             *livery);
 
 G_END_DECLS

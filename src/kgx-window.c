@@ -19,35 +19,29 @@
 #include "kgx-config.h"
 
 #include <glib/gi18n.h>
-#include <math.h>
+
 #include <adwaita.h>
 
-#include "rgba.h"
-
-#include "kgx-window.h"
 #include "kgx-application.h"
 #include "kgx-close-dialog.h"
 #include "kgx-pages.h"
-#include "kgx-preferences-window.h"
+#include "kgx-settings.h"
+#include "kgx-terminal.h"
 #include "kgx-theme-switcher.h"
-#include "kgx-watcher.h"
+#include "kgx-utils.h"
+#include "preferences/kgx-preferences-window.h"
+
+#include "kgx-window.h"
 
 
-/**
- * KgxWindow:
- * @close_anyway: ignore running children and close without prompt
- * @pages: the #KgxPages of #KgxPage current in the window
- *
- * The main #AdwApplicationWindow that acts as the terminal
- */
 typedef struct _KgxWindowPrivate KgxWindowPrivate;
 struct _KgxWindowPrivate {
   KgxSettings          *settings;
   GBindingGroup        *settings_binds;
 
-  KgxWatcher           *watcher;
-
   gboolean              search_enabled;
+  gboolean              floating;
+  gboolean              translucent;
 
   gboolean              close_anyway;
 
@@ -56,6 +50,8 @@ struct _KgxWindowPrivate {
   GtkWidget            *tab_bar;
   GtkWidget            *tab_overview;
   GtkWidget            *pages;
+
+  GBindingGroup        *surface_binds;
 };
 
 
@@ -65,8 +61,9 @@ G_DEFINE_TYPE_WITH_PRIVATE (KgxWindow, kgx_window, ADW_TYPE_APPLICATION_WINDOW)
 enum {
   PROP_0,
   PROP_SETTINGS,
-  PROP_WATCHER,
   PROP_SEARCH_MODE_ENABLED,
+  PROP_FLOATING,
+  PROP_TRANSLUCENT,
   LAST_PROP
 };
 static GParamSpec *pspecs[LAST_PROP] = { NULL, };
@@ -79,7 +76,6 @@ kgx_window_dispose (GObject *object)
   KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
 
   g_clear_object (&priv->settings);
-  g_clear_object (&priv->watcher);
 
   G_OBJECT_CLASS (kgx_window_parent_class)->dispose (object);
 }
@@ -98,11 +94,20 @@ kgx_window_set_property (GObject      *object,
     case PROP_SETTINGS:
       g_set_object (&priv->settings, g_value_get_object (value));
       break;
-    case PROP_WATCHER:
-      g_set_object (&priv->watcher, g_value_get_object (value));
-      break;
     case PROP_SEARCH_MODE_ENABLED:
-      priv->search_enabled = g_value_get_boolean (value);
+      kgx_set_boolean_prop (object, pspec, &priv->search_enabled, value);
+      break;
+    case PROP_FLOATING:
+      kgx_set_boolean_prop (object, pspec, &priv->floating, value);
+      break;
+    case PROP_TRANSLUCENT:
+      if (kgx_set_boolean_prop (object, pspec, &priv->translucent, value)) {
+        if (priv->translucent) {
+          gtk_widget_add_css_class (GTK_WIDGET (self), "translucent");
+        } else {
+          gtk_widget_remove_css_class (GTK_WIDGET (self), "translucent");
+        }
+      }
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -124,16 +129,42 @@ kgx_window_get_property (GObject    *object,
     case PROP_SETTINGS:
       g_value_set_object (value, priv->settings);
       break;
-    case PROP_WATCHER:
-      g_value_set_object (value, priv->watcher);
-      break;
     case PROP_SEARCH_MODE_ENABLED:
       g_value_set_boolean (value, priv->search_enabled);
+      break;
+    case PROP_FLOATING:
+      g_value_set_boolean (value, priv->floating);
+      break;
+    case PROP_TRANSLUCENT:
+      g_value_set_boolean (value, priv->translucent);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
+}
+
+
+static void
+kgx_window_realize (GtkWidget *widget)
+{
+  KgxWindowPrivate *priv = kgx_window_get_instance_private (KGX_WINDOW (widget));
+
+  GTK_WIDGET_CLASS (kgx_window_parent_class)->realize (widget);
+
+  g_binding_group_set_source (priv->surface_binds,
+                              gtk_native_get_surface (GTK_NATIVE (widget)));
+}
+
+
+static void
+kgx_window_unrealize (GtkWidget *widget)
+{
+  KgxWindowPrivate *priv = kgx_window_get_instance_private (KGX_WINDOW (widget));
+
+  g_binding_group_set_source (priv->surface_binds, NULL);
+
+  GTK_WIDGET_CLASS (kgx_window_parent_class)->unrealize (widget);
 }
 
 
@@ -168,7 +199,6 @@ kgx_window_close_request (GtkWindow *window)
   KgxWindow *self = KGX_WINDOW (window);
   KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
   g_autoptr (GPtrArray) children = NULL;
-  KgxCloseDialog *dlg;
 
   children = kgx_pages_get_children (KGX_PAGES (priv->pages));
 
@@ -184,28 +214,23 @@ kgx_window_close_request (GtkWindow *window)
     return FALSE; /* Aka no, I don’t want to block closing */
   }
 
-  dlg = g_object_new (KGX_TYPE_CLOSE_DIALOG,
-                      "context", KGX_CONTEXT_WINDOW,
-                      "commands", children,
-                      "transient-for", self,
-                      NULL);
-  kgx_close_dialog_run (dlg, NULL, got_close, g_object_ref (self));
+  kgx_close_dialog_run (g_object_new (KGX_TYPE_CLOSE_DIALOG,
+                                      "context", KGX_CONTEXT_WINDOW,
+                                      "commands", children,
+                                      NULL),
+                        GTK_WIDGET (self),
+                        NULL,
+                        got_close,
+                        g_object_ref (self));
 
   return TRUE; /* Block the close */
 }
 
 
-static void
-active_changed (GObject *object, GParamSpec *pspec, gpointer data)
+static gboolean
+and (KgxWindow *self, gboolean a, gboolean b)
 {
-  KgxWindow *self = KGX_WINDOW (object);
-  KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
-
-  if (gtk_window_is_active (GTK_WINDOW (self))) {
-    kgx_watcher_push_active (priv->watcher);
-  } else {
-    kgx_watcher_pop_active (priv->watcher);
-  }
+  return a && b;
 }
 
 
@@ -246,7 +271,6 @@ create_tearoff_host (KgxPages *pages, KgxWindow *self)
   new_window = g_object_new (KGX_TYPE_WINDOW,
                              "application", application,
                              "settings", priv->settings,
-                             "watcher", priv->watcher,
                              "default-width", width,
                              "default-height", height,
                              NULL);
@@ -458,7 +482,6 @@ new_activated (GtkWidget  *widget,
                GVariant   *parameter)
 {
   KgxWindow *self = KGX_WINDOW (widget);
-  guint32 timestamp = GDK_CURRENT_TIME;
   GtkApplication *application = NULL;
   g_autoptr (GFile) dir = NULL;
 
@@ -467,7 +490,6 @@ new_activated (GtkWidget  *widget,
 
   kgx_application_add_terminal (KGX_APPLICATION (application),
                                 NULL,
-                                timestamp,
                                 dir,
                                 NULL,
                                 NULL);
@@ -480,7 +502,6 @@ new_tab_activated (GtkWidget  *widget,
                    GVariant   *parameter)
 {
   KgxWindow *self = KGX_WINDOW (widget);
-  guint32 timestamp = GDK_CURRENT_TIME;
   GtkApplication *application = NULL;
   g_autoptr (GFile) dir = NULL;
 
@@ -489,7 +510,6 @@ new_tab_activated (GtkWidget  *widget,
 
   kgx_application_add_terminal (KGX_APPLICATION (application),
                                 self,
-                                timestamp,
                                 dir,
                                 NULL,
                                 NULL);
@@ -508,11 +528,11 @@ about_activated  (GtkWidget  *widget,
   /* Translators: %s is the year range */
   copyright = g_strdup_printf (_("© %s Zander Brown"), "2019-2024");
 
-  adw_show_about_window (GTK_WINDOW (widget),
+  adw_show_about_dialog (widget,
                          "application-name", KGX_DISPLAY_NAME,
                          "application-icon", KGX_APPLICATION_ID,
                          "developer-name", _("The GNOME Project"),
-                         "issue-url", "https://gitlab.gnome.org/GNOME/console/-/issues/new",
+                         "issue-url", "https://gitlab.gnome.org/GNOME/console/-/issues/",
                          "website", "https://apps.gnome.org/en-GB/app/org.gnome.Console/",
                          "version", PACKAGE_VERSION,
                          "developers", developers,
@@ -527,8 +547,8 @@ about_activated  (GtkWidget  *widget,
 
 static void
 tab_switcher_activated (GtkWidget  *widget,
-                                   const char *action_name,
-                                   GVariant   *parameter)
+                        const char *action_name,
+                        GVariant   *parameter)
 {
   KgxWindow *self = KGX_WINDOW (widget);
   KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
@@ -542,15 +562,13 @@ show_preferences_window_activated (GtkWidget  *widget,
                                    const char *action_name,
                                    GVariant   *parameter)
 {
-  KgxWindow *self = KGX_WINDOW (widget);
-  KgxWindowPrivate *priv = kgx_window_get_instance_private (self);
-  GtkWindow *preferences;
+  KgxWindowPrivate *priv =
+    kgx_window_get_instance_private (KGX_WINDOW (widget));
 
-  preferences = g_object_new (KGX_TYPE_PREFERENCES_WINDOW,
-                              "transient-for", self,
-                              "settings", priv->settings,
-                              NULL);
-  gtk_window_present (preferences);
+  adw_dialog_present (g_object_new (KGX_TYPE_PREFERENCES_WINDOW,
+                                    "settings", priv->settings,
+                                    NULL),
+                      widget);
 }
 
 
@@ -565,6 +583,9 @@ kgx_window_class_init (KgxWindowClass *klass)
   object_class->set_property = kgx_window_set_property;
   object_class->get_property = kgx_window_get_property;
 
+  widget_class->realize = kgx_window_realize;
+  widget_class->unrealize = kgx_window_unrealize;
+
   window_class->close_request = kgx_window_close_request;
 
   pspecs[PROP_SETTINGS] =
@@ -572,15 +593,20 @@ kgx_window_class_init (KgxWindowClass *klass)
                          KGX_TYPE_SETTINGS,
                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
-  pspecs[PROP_WATCHER] =
-    g_param_spec_object ("watcher", NULL, NULL,
-                         KGX_TYPE_WATCHER,
-                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
-
   pspecs[PROP_SEARCH_MODE_ENABLED] =
     g_param_spec_boolean ("search-mode-enabled", NULL, NULL,
                           FALSE,
-                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY);
+
+  pspecs[PROP_FLOATING] =
+    g_param_spec_boolean ("floating", NULL, NULL,
+                          FALSE,
+                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY);
+
+  pspecs[PROP_TRANSLUCENT] =
+    g_param_spec_boolean ("translucent", NULL, NULL,
+                          FALSE,
+                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY);
 
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
 
@@ -596,8 +622,9 @@ kgx_window_class_init (KgxWindowClass *klass)
   gtk_widget_class_bind_template_child_private (widget_class, KgxWindow, tab_overview);
   gtk_widget_class_bind_template_child_private (widget_class, KgxWindow, pages);
   gtk_widget_class_bind_template_child_private (widget_class, KgxWindow, settings_binds);
+  gtk_widget_class_bind_template_child_private (widget_class, KgxWindow, surface_binds);
 
-  gtk_widget_class_bind_template_callback (widget_class, active_changed);
+  gtk_widget_class_bind_template_callback (widget_class, and);
   gtk_widget_class_bind_template_callback (widget_class, zoom);
   gtk_widget_class_bind_template_callback (widget_class, create_tearoff_host);
   gtk_widget_class_bind_template_callback (widget_class, maybe_close_window);
@@ -645,6 +672,27 @@ kgx_window_class_init (KgxWindowClass *klass)
 }
 
 
+static gboolean
+state_to_floating (GBinding     *binding,
+                   const GValue *from_value,
+                   GValue       *to_value,
+                   gpointer      user_data)
+{
+  GdkToplevelState state = g_value_get_flags (from_value);
+
+  g_value_set_boolean (to_value,
+                       !((state & (GDK_TOPLEVEL_STATE_FULLSCREEN |
+                                   GDK_TOPLEVEL_STATE_MAXIMIZED |
+                                   GDK_TOPLEVEL_STATE_TILED |
+                                   GDK_TOPLEVEL_STATE_TOP_TILED |
+                                   GDK_TOPLEVEL_STATE_RIGHT_TILED |
+                                   GDK_TOPLEVEL_STATE_BOTTOM_TILED |
+                                   GDK_TOPLEVEL_STATE_LEFT_TILED)) > 0));
+
+  return TRUE;
+}
+
+
 static void
 kgx_window_init (KgxWindow *self)
 {
@@ -666,6 +714,11 @@ kgx_window_init (KgxWindow *self)
   g_binding_group_bind (priv->settings_binds, "theme",
                         priv->theme_switcher, "theme",
                         G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  g_binding_group_bind_full (priv->surface_binds, "state",
+                             self, "floating",
+                             G_BINDING_SYNC_CREATE,
+                             state_to_floating, NULL, NULL, NULL);
 
   #ifdef IS_DEVEL
   gtk_widget_add_css_class (GTK_WIDGET (self), "devel");
