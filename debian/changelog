@@ -1,3 +1,9 @@
+gnome-console (47~beta-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Simon McVittie <smcv@debian.org>  Wed, 28 Aug 2024 13:06:53 +0100
+
 gnome-console (46.0-2) unstable; urgency=medium
 
   * Bump minimum glib, gtk4, and vte2.91
