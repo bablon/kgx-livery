@@ -4,11 +4,11 @@ Upstream-Contact: Zander Brown <zbrown@gnome.org>
 Source: https://gitlab.gnome.org/GNOME/console
 
 Files: *
-Copyright: 2019-2022 Zander Brown <zbrown@gnome.org>
+Copyright: 2019-2024 Zander Brown <zbrown@gnome.org>
 License: GPL-3+
 
 Files: data/org.gnome.Console.metainfo.xml.in.in
-Copyright: 2019-2021 Zander Brown <zbrown@gnome.org>
+Copyright: 2019-2024 Zander Brown <zbrown@gnome.org>
 License: CC0-1.0
 
 Files: data/org.gnome.Console*.svg
@@ -84,8 +84,13 @@ Copyright: 1998-2005 Free Software Foundation, Inc.
            2022 Ngọc Quân Trần <vnwildman@gmail.com>
 License: GPL-3+
 
-Files: src/fp-vte-util.*
-       src/rgba.h
+Files: src/kgx-depot.c
+Copyright:
+ 2019 Christian Hergert
+ 2021-2024 Zander Brown
+License: GPL-3+, and MIT or Apache-2.0
+
+Files: src/rgba.h
 Copyright: 2018-2019 Christian Hergert <chergert@redhat.com>
 License: MIT or Apache-2.0
 
