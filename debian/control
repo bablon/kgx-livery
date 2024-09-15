@@ -28,18 +28,7 @@ Depends:
  ${misc:Depends},
  ${shlibs:Depends},
  gsettings-desktop-schemas,
-Provides: x-terminal-emulator
-Replaces: kgx (<< 42~beta~)
-Breaks: kgx (<< 42~beta~)
+Provides: x-terminal-emulator, kgx (= ${binary:Version})
 Description: Simple user-friendly terminal emulator for the GNOME desktop
  Console is a simple terminal emulator for GNOME that adjusts nicely
  to small screen sizes and touch usage.
-
-Package: kgx
-Architecture: all
-Section: oldlibs
-Depends:
- ${misc:Depends},
- gnome-console,
-Description: Simple terminal emulator (transitional package)
- This is a transitional package. It can safely be removed.
