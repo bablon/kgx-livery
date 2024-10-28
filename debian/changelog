@@ -1,4 +1,4 @@
-gnome-console (47.0-1) UNRELEASED; urgency=medium
+gnome-console (47.1-1) UNRELEASED; urgency=medium
 
   * New upstream release
   * d/control: Update dependencies
@@ -12,7 +12,7 @@ gnome-console (47.0-1) UNRELEASED; urgency=medium
     or by having some other integration mechanism for interactive shells,
     like adding bashrc.d (#675008, #894999) and zshrc.d (#776663).
 
- -- Simon McVittie <smcv@debian.org>  Mon, 28 Oct 2024 09:34:56 +0000
+ -- Simon McVittie <smcv@debian.org>  Mon, 28 Oct 2024 09:36:39 +0000
 
 gnome-console (46.0-2) unstable; urgency=medium
 
