@@ -4,7 +4,10 @@ Upstream-Contact: Zander Brown <zbrown@gnome.org>
 Source: https://gitlab.gnome.org/GNOME/console
 
 Files: *
-Copyright: 2019-2024 Zander Brown <zbrown@gnome.org>
+Copyright:
+ 2021 Purism SPC
+ 2023 Maximiliano Sandoval
+ 2019-2024 Zander Brown <zbrown@gnome.org>
 License: GPL-3+
 
 Files: data/org.gnome.Console.metainfo.xml.in.in
@@ -90,25 +93,15 @@ Copyright:
  2021-2024 Zander Brown
 License: GPL-3+, and MIT or Apache-2.0
 
+Files:
+ src/org.freedesktop.FileManager1.xml
+Copyright:
+ not specified
+License: LGPL-2+
+
 Files: src/rgba.h
 Copyright: 2018-2019 Christian Hergert <chergert@redhat.com>
 License: MIT or Apache-2.0
-
-Files: src/kgx-tab-button.c
-Copyright: 2019 Alexander Mikhaylenko <exalm7659@gmail.com>
-           2021 Purism SPC
-License: GPL-3+
-
-Files: src/kgx-tab-button.h
-       src/kgx-tab-button.ui
-       src/kgx-tab-switcher*
-       src/kgx-theme-switcher.*
-Copyright: 2021 Purism SPC
-License: GPL-3+
-
-Files: src/kgx-tab.*
-Copyright: 2019-2020 Zander Brown <zbrown@gnome.org>
-License: GPL-3+
 
 License: GPL-3+
  This package is free software; you can redistribute it and/or modify
@@ -126,6 +119,21 @@ License: GPL-3+
  .
  On Debian systems, the complete text of the GNU General
  Public License version 3 can be found in "/usr/share/common-licenses/GPL-3".
+
+License: LGPL-2+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+ .
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General
+ Public License along with this library; if not, see
+ <http://www.gnu.org/licenses/>.
 
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a
