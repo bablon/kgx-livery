@@ -11,8 +11,12 @@ gnome-console (47.1-1) UNRELEASED; urgency=medium
     by sourcing /etc/profile.d in interactive shells (like Fedora does)
     or by having some other integration mechanism for interactive shells,
     like adding bashrc.d (#675008, #894999) and zshrc.d (#776663).
+  * d/gnome-console.README.Debian:
+    Describe how to make new tabs keep working directory
+  * Rename maintainer scripts to debian/gnome-console.*.
+    This makes it clearer that they are specific to one binary package.
 
- -- Simon McVittie <smcv@debian.org>  Mon, 28 Oct 2024 09:36:39 +0000
+ -- Simon McVittie <smcv@debian.org>  Mon, 28 Oct 2024 10:16:53 +0000
 
 gnome-console (46.0-2) unstable; urgency=medium
 
