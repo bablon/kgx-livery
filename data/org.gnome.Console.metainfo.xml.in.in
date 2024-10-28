@@ -26,11 +26,16 @@
   </requires>
   <screenshots>
     <screenshot type="default">
-      <image height="561" width="732">https://gitlab.gnome.org/GNOME/console/raw/gnome-43/data/screenshots/01-Terminal.png</image>
+      <image height="602" width="776">https://gitlab.gnome.org/GNOME/console/raw/gnome-47/data/screenshots/01-Terminal.png</image>
       <caption>Terminal window</caption>
     </screenshot>
   </screenshots>
   <releases>
+    <release version="47.1" date="2024-09-18" type="stable">
+      <description>
+        <p>Minor fixes</p>
+      </description>
+    </release>
     <release version="47.0" date="2024-09-15" type="stable">
       <description>
         <p>Updated Translations:</p>
