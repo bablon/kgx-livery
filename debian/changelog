@@ -1,3 +1,11 @@
+gnome-console (47.1-2) experimental; urgency=medium
+
+  * debian/README.source: update branch name & don't recommend pbuilder
+  * Remove obsolete kgx transitional package and Breaks/Replaces
+  * Cherry-pick patches to fix compatibility with gtk 4.17
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Sun, 08 Dec 2024 21:31:17 -0500
+
 gnome-console (47.1-1) experimental; urgency=medium
 
   * Team upload
