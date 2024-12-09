@@ -1,0 +1,72 @@
+From: Zander Brown <zbrown@gnome.org>
+Date: Wed, 13 Nov 2024 15:06:07 +0000
+Subject: shared-closures: handy <closure> functions
+
+We were getting increasingly close to having identical closure
+implemenations in multiple types, instead have this header to share them
+
+(cherry picked from commit b2b60558c9626f4596eb0c4fec768aa39e96c873)
+
+Origin: upstream, future 48 alpha
+---
+ src/kgx-shared-closures.h | 38 ++++++++++++++++++++++++++++++++++++++
+ src/meson.build           |  1 +
+ 2 files changed, 39 insertions(+)
+ create mode 100644 src/kgx-shared-closures.h
+
+diff --git a/src/kgx-shared-closures.h b/src/kgx-shared-closures.h
+new file mode 100644
+index 0000000..c0d1807
+--- /dev/null
++++ b/src/kgx-shared-closures.h
+@@ -0,0 +1,38 @@
++/* kgx-shared-closures.h
++ *
++ * Copyright 2024 Zander Brown
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++#pragma once
++
++#include <adwaita.h>
++
++G_BEGIN_DECLS
++
++
++G_GNUC_UNUSED
++static AdwStyleManager *
++kgx_style_manager_for_display (G_GNUC_UNUSED GObject *self,
++                               GdkDisplay            *display)
++{
++  if (G_UNLIKELY (!display)) {
++    return NULL;
++  }
++
++  return g_object_ref (adw_style_manager_get_for_display (display));
++}
++
++G_END_DECLS
+diff --git a/src/meson.build b/src/meson.build
+index 35952e8..4743bf8 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -31,6 +31,7 @@ kgx_sources = [
+   'kgx-proxy-info.h',
+   'kgx-settings.c',
+   'kgx-settings.h',
++  'kgx-shared-closures.h',
+   'kgx-simple-tab.c',
+   'kgx-simple-tab.h',
+   'kgx-system-info.c',
