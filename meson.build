@@ -1,5 +1,5 @@
 project('gnome-console', 'c',
-                  version: '47.1',
+                  version: '48.rc',
             meson_version: '>= 0.59.0',
                   license: 'GPL-3.0-or-later',
           default_options: [
@@ -66,6 +66,10 @@ conf.set('BIN_NAME', bin_name)
 conf.set_quoted('KGX_BIN_NAME', bin_name)
 conf.set('IS_DEVEL', get_option('devel'))
 
+if get_option('tests')
+  conf.set_quoted('TRUE_BIN_PATH', find_program('true').full_path())
+endif
+
 config_h_in = configure_file(
   output: 'kgx-config.h.in',
   configuration: conf,
@@ -74,6 +78,7 @@ config_h = vcs_tag( input: config_h_in,
                    output: 'kgx-config.h',
                   command: ['git', 'rev-parse', '--short', 'HEAD'],
                  fallback: 'Devel')
+config_h_inc = include_directories('.')
 
 # Gtk Requirement
 gtk_min_ver = '4.14'
@@ -156,7 +161,9 @@ schemas_dep = dependency('gsettings-desktop-schemas')
 subdir('data')
 subdir('src')
 subdir('po')
-subdir('tests')
+if get_option('tests')
+  subdir('tests')
+endif
 
 gnome.post_install(
      glib_compile_schemas: true,
