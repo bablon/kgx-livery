@@ -123,51 +123,79 @@ kgx_application_activate (GApplication *app)
 }
 
 
+static gboolean
+theme_to_colour_scheme (GBinding     *binding,
+                        const GValue *from_value,
+                        GValue       *to_value,
+                        gpointer      user_data)
+{
+  switch (g_value_get_enum (from_value)) {
+    case KGX_THEME_AUTO:
+      g_value_set_enum (to_value, ADW_COLOR_SCHEME_PREFER_LIGHT);
+      break;
+    case KGX_THEME_DAY:
+      g_value_set_enum (to_value, ADW_COLOR_SCHEME_FORCE_LIGHT);
+      break;
+    case KGX_THEME_NIGHT:
+    case KGX_THEME_HACKER:
+    default:
+      g_value_set_enum (to_value, ADW_COLOR_SCHEME_FORCE_DARK);
+      break;
+  }
+
+  return TRUE;
+}
+
+
 static void
 kgx_application_startup (GApplication *app)
 {
-  const char *const new_window_accels[] = { "<shift><primary>n", NULL };
-  const char *const new_tab_accels[] = { "<shift><primary>t", NULL };
-  const char *const close_tab_accels[] = { "<shift><primary>w", NULL };
-  const char *const copy_accels[] = { "<shift><primary>c", NULL };
-  const char *const paste_accels[] = { "<shift><primary>v", NULL };
-  const char *const find_accels[] = { "<shift><primary>f", NULL };
-  const char *const zoom_in_accels[] = { "<primary>plus", NULL };
-  const char *const zoom_out_accels[] = { "<primary>minus", NULL };
-  const char *const zoom_normal_accels[] = { "<primary>0", NULL };
-  const char *const show_tabs_accels[] = { "<shift><primary>o", NULL };
+  KgxApplication *self = KGX_APPLICATION (app);
+  AdwStyleManager *style_manager;
 
   g_resources_register (kgx_get_resource ());
 
-  g_type_ensure (KGX_TYPE_WINDOW);
-  g_type_ensure (KGX_TYPE_TERMINAL);
-  g_type_ensure (KGX_TYPE_PAGES);
-  g_type_ensure (KGX_TYPE_DROP_TARGET);
-
   G_APPLICATION_CLASS (kgx_application_parent_class)->startup (app);
 
+  style_manager = adw_style_manager_get_default ();
+  g_object_bind_property_full (self->settings, "theme",
+                               style_manager, "color-scheme",
+                               G_BINDING_SYNC_CREATE,
+                               theme_to_colour_scheme, NULL, NULL, NULL);
+
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "win.new-window", new_window_accels);
+                                         "win.new-window",
+                                         (const char *[]) { "<shift><primary>n", "New", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "win.new-tab", new_tab_accels);
+                                         "win.new-tab",
+                                         (const char *[]) { "<shift><primary>t", "<shift>New", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "win.close-tab", close_tab_accels);
+                                         "win.close-tab",
+                                         (const char *[]) { "<shift><primary>w", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "term.copy", copy_accels);
+                                         "term.copy",
+                                         (const char *[]) { "<shift><primary>c", "Copy", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "term.paste", paste_accels);
+                                         "term.paste",
+                                         (const char *[]) { "<shift><primary>v", "Paste", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "win.find", find_accels);
+                                         "win.find",
+                                         (const char *[]) { "<shift><primary>f", "Find", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "app.zoom-in", zoom_in_accels);
+                                         "app.zoom-in",
+                                         (const char *[]) { "<primary>plus", "ZoomIn", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "app.zoom-out", zoom_out_accels);
+                                         "app.zoom-out",
+                                         (const char *[]) { "<primary>minus", "ZoomOut", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "app.zoom-normal", zoom_normal_accels);
+                                         "app.zoom-normal",
+                                         (const char *[]) { "<primary>0", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "win.show-tabs", show_tabs_accels);
+                                         "win.show-tabs",
+                                         (const char *[]) { "<shift><primary>o", NULL });
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
-                                         "win.show-tabs-desktop", show_tabs_accels);
+                                         "win.show-tabs-desktop",
+                                         (const char *[]) { "<shift><primary>o", NULL });
 }
 
 
@@ -298,6 +326,23 @@ kgx_application_command_line (GApplication            *app,
 }
 
 
+static inline void
+print_colour (size_t colour, size_t n)
+{
+  g_print ("\e[0;%02" G_GSIZE_FORMAT "m #%02" G_GSIZE_FORMAT " \e[0m", colour, n);
+}
+
+
+static inline void
+print_colour_row (size_t base, bool second_row)
+{
+  for (size_t i = 0; i < 8; i++) {
+    print_colour (base + i, i + (second_row ? 8 : 0));
+  }
+  g_print ("\n");
+}
+
+
 static int
 kgx_application_handle_local_options (GApplication *app,
                                       GVariantDict *options)
@@ -305,6 +350,7 @@ kgx_application_handle_local_options (GApplication *app,
   KgxApplication *self = KGX_APPLICATION (app);
   gboolean version = FALSE;
   gboolean about = FALSE;
+  gboolean colour_table = FALSE;
 
   if (g_variant_dict_lookup (options, "version", "b", &version) && version) {
     kgx_about_print_version ();
@@ -314,6 +360,18 @@ kgx_application_handle_local_options (GApplication *app,
 
   if (g_variant_dict_lookup (options, "about", "b", &about) && about) {
     kgx_about_print_logo ();
+
+    return EXIT_SUCCESS;
+  }
+
+  if (g_variant_dict_lookup (options, "colour-table", "b", &colour_table) &&
+      colour_table) {
+    g_print ("Colour Table\n");
+
+    print_colour_row (30, false);
+    print_colour_row (90, true);
+    print_colour_row (40, false);
+    print_colour_row (100, true);
 
     return EXIT_SUCCESS;
   }
@@ -403,6 +461,8 @@ kgx_application_class_init (KgxApplicationClass *klass)
                                                      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
+
+  g_type_ensure (KGX_TYPE_WINDOW);
 }
 
 
@@ -494,6 +554,15 @@ static GOptionEntry entries[] = {
     0,
     G_OPTION_FLAG_HIDDEN,
     G_OPTION_ARG_FILENAME_ARRAY,
+    NULL,
+    NULL,
+    NULL,
+  },
+  {
+    "colour-table",
+    0,
+    G_OPTION_FLAG_HIDDEN,
+    G_OPTION_ARG_NONE,
     NULL,
     NULL,
     NULL,
@@ -596,30 +665,6 @@ static GActionEntry app_entries[] = {
 
 
 static gboolean
-theme_to_colour_scheme (GBinding     *binding,
-                        const GValue *from_value,
-                        GValue       *to_value,
-                        gpointer      user_data)
-{
-  switch (g_value_get_enum (from_value)) {
-    case KGX_THEME_AUTO:
-      g_value_set_enum (to_value, ADW_COLOR_SCHEME_PREFER_LIGHT);
-      break;
-    case KGX_THEME_DAY:
-      g_value_set_enum (to_value, ADW_COLOR_SCHEME_FORCE_LIGHT);
-      break;
-    case KGX_THEME_NIGHT:
-    case KGX_THEME_HACKER:
-    default:
-      g_value_set_enum (to_value, ADW_COLOR_SCHEME_FORCE_DARK);
-      break;
-  }
-
-  return TRUE;
-}
-
-
-static gboolean
 scale_to_can_reset (GBinding     *binding,
                     const GValue *from_value,
                     GValue       *to_value,
@@ -637,7 +682,6 @@ scale_to_can_reset (GBinding     *binding,
 static void
 kgx_application_init (KgxApplication *self)
 {
-  AdwStyleManager *style_manager = adw_style_manager_get_default ();
   GAction *action;
   g_autoptr (GPropertyAction) theme_action = NULL;
   /* Translators: %s is the version string, KGX is a codename and should be left as-is */
@@ -658,10 +702,6 @@ kgx_application_init (KgxApplication *self)
   self->active_windows = g_hash_table_new (g_direct_hash, g_direct_equal);
 
   self->settings = g_object_new (KGX_TYPE_SETTINGS, NULL);
-  g_object_bind_property_full (self->settings, "theme",
-                               style_manager, "color-scheme",
-                               G_BINDING_SYNC_CREATE,
-                               theme_to_colour_scheme, NULL, NULL, NULL);
 
   action = g_action_map_lookup_action (G_ACTION_MAP (self), "zoom-out");
   g_object_bind_property (self->settings, "scale-can-decrease",
@@ -696,12 +736,32 @@ kgx_application_init (KgxApplication *self)
 }
 
 
-static void
-page_died (gpointer data, GObject *dead_object)
-{
-  KgxApplication *self = KGX_APPLICATION (g_application_get_default ());
+struct _PageDiedData {
+  KgxApplication *app;
+  guint tab_id;
+};
 
-  g_tree_remove (self->pages, data);
+
+KGX_DEFINE_DATA (PageDiedData, page_died_data)
+
+
+static void
+page_died_data_cleanup (PageDiedData *self)
+{
+  g_clear_weak_pointer (&self->app);
+}
+
+
+static void
+page_died (gpointer user_data, GObject *dead_object)
+{
+  PageDiedData *data = user_data;
+
+  if (G_LIKELY (data->app)) {
+    g_tree_remove (data->app->pages, GINT_TO_POINTER (data->tab_id));
+  }
+
+  page_died_data_free (data);
 }
 
 
@@ -716,15 +776,16 @@ void
 kgx_application_add_page (KgxApplication *self,
                           KgxTab         *page)
 {
-  guint id = 0;
+  g_autoptr (PageDiedData) data = page_died_data_alloc ();
 
   g_return_if_fail (KGX_IS_APPLICATION (self));
   g_return_if_fail (KGX_IS_TAB (page));
 
-  id = kgx_tab_get_id (page);
+  g_set_weak_pointer (&data->app, self);
+  data->tab_id = kgx_tab_get_id (page);
 
-  g_tree_insert (self->pages, GINT_TO_POINTER (id), page);
-  g_object_weak_ref (G_OBJECT (page), page_died, GINT_TO_POINTER (id));
+  g_tree_insert (self->pages, GINT_TO_POINTER (data->tab_id), page);
+  g_object_weak_ref (G_OBJECT (page), page_died, g_steal_pointer (&data));
 }
 
 

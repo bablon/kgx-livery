@@ -1,4 +1,6 @@
-kgx_sources = [
+subdir('pids')
+
+kgx_sources = files(
   'kgx-about.c',
   'kgx-about.h',
   'kgx-application.c',
@@ -13,6 +15,8 @@ kgx_sources = [
   'kgx-despatcher.h',
   'kgx-drop-target.c',
   'kgx-drop-target.h',
+  'kgx-empty.c',
+  'kgx-empty.h',
   'kgx-livery-manager.c',
   'kgx-livery-manager.h',
   'kgx-livery.c',
@@ -29,6 +33,7 @@ kgx_sources = [
   'kgx-proxy-info.h',
   'kgx-settings.c',
   'kgx-settings.h',
+  'kgx-shared-closures.h',
   'kgx-simple-tab.c',
   'kgx-simple-tab.h',
   'kgx-system-info.c',
@@ -51,7 +56,7 @@ kgx_sources = [
   'preferences/kgx-font-picker.h',
   'preferences/kgx-preferences-window.c',
   'preferences/kgx-preferences-window.h',
-]
+)
 
 kgx_deps = [
   gio_dep,
@@ -60,9 +65,9 @@ kgx_deps = [
   gtk_dep,
   adw_dep,
   vte_dep,
-  gtop_dep,
   pcre_dep,
   schemas_dep,
+  kgx_pids_dep,
   cc.find_library('m', required: false),
 ]
 
