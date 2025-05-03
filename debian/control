@@ -15,7 +15,7 @@ Build-Depends:
  libvte-2.91-gtk4-dev (>= 0.77.0),
  meson,
 # Tests:
- appstream-util <!nocheck>,
+ appstream <!nocheck>,
 Standards-Version: 4.7.0
 Homepage: https://apps.gnome.org/Console/
 Vcs-Browser: https://salsa.debian.org/gnome-team/gnome-console
