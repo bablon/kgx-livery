@@ -5,17 +5,16 @@ Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.
 Uploaders: Jeremy Bícha <jbicha@ubuntu.com>, Arnaud Ferraris <aferraris@debian.org>
 Build-Depends:
  debhelper-compat (= 13),
+ appstream <!nocheck>,
  desktop-file-utils,
  gsettings-desktop-schemas-dev,
  libadwaita-1-dev (>= 1.8~alpha),
  libglib2.0-dev (>= 2.80.0),
- libgtop2-dev,
  libgtk-4-dev (>= 4.19),
+ libgtop2-dev,
  libpcre2-dev,
  libvte-2.91-gtk4-dev (>= 0.77.0),
- meson,
-# Tests:
- appstream <!nocheck>,
+ meson
 Standards-Version: 4.7.2
 Homepage: https://apps.gnome.org/Console/
 Vcs-Browser: https://salsa.debian.org/gnome-team/gnome-console
@@ -24,10 +23,10 @@ Vcs-Git: https://salsa.debian.org/gnome-team/gnome-console.git
 Package: gnome-console
 Architecture: any
 Depends:
- ${misc:Depends},
- ${shlibs:Depends},
  gsettings-desktop-schemas,
-Provides: x-terminal-emulator, kgx (= ${binary:Version})
+ ${misc:Depends},
+ ${shlibs:Depends}
+Provides: x-terminal-emulator
 Description: Simple user-friendly terminal emulator for the GNOME desktop
  Console is a simple terminal emulator for GNOME that adjusts nicely
  to small screen sizes and touch usage.
