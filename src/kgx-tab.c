@@ -28,6 +28,8 @@
 #include "kgx-marshals.h"
 #include "kgx-pages.h"
 #include "kgx-settings.h"
+#include "kgx-spad-source.h"
+#include "kgx-spad.h"
 #include "kgx-terminal.h"
 #include "kgx-utils.h"
 
@@ -65,6 +67,10 @@ struct _KgxTabPrivate {
 
   GCancellable         *cancellable;
 
+  char                 *initial_title;
+  GFile                *initial_path;
+  guint                 initial_timeout;
+
   KgxDropTarget        *drop_target;
 
   GtkWidget            *stack;
@@ -75,6 +81,8 @@ struct _KgxTabPrivate {
   GtkWidget            *search_entry;
   GtkWidget            *search_bar;
   char                 *last_search;
+
+  AdwToastOverlay      *toasts;
 
   char                 *notification_id;
 };
@@ -107,6 +115,8 @@ enum {
   PROP_DROPPING,
   PROP_WORKING,
   PROP_CANCELLABLE,
+  PROP_INITIAL_TITLE,
+  PROP_INITIAL_PATH,
   LAST_PROP
 };
 static GParamSpec *pspecs[LAST_PROP] = { NULL, };
@@ -153,6 +163,10 @@ kgx_tab_dispose (GObject *object)
   g_clear_object (&priv->path);
 
   g_clear_handle_id (&priv->ringing_timeout, g_source_remove);
+
+  g_clear_pointer (&priv->initial_title, g_free);
+  g_clear_object (&priv->initial_path);
+  g_clear_handle_id (&priv->initial_timeout, g_source_remove);
 
   g_clear_pointer (&priv->last_search, g_free);
 
@@ -341,10 +355,45 @@ kgx_tab_get_property (GObject    *object,
     case PROP_CANCELLABLE:
       g_value_set_object (value, priv->cancellable);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+    case PROP_INITIAL_TITLE:
+      g_value_set_string (value, priv->initial_title);
       break;
+    case PROP_INITIAL_PATH:
+      g_value_set_object (value, priv->initial_path);
+      break;
+    KGX_INVALID_PROP (object, property_id, pspec);
   }
+}
+
+
+static void
+clear_initial (gpointer data)
+{
+  KgxTab *self = data;
+  KgxTabPrivate *priv;
+
+  g_return_if_fail (KGX_IS_TAB (self));
+
+  priv = kgx_tab_get_instance_private (self);
+
+  priv->initial_timeout = 0;
+
+  g_clear_pointer (&priv->initial_title, g_free);
+  g_clear_object (&priv->initial_path);
+
+  g_object_notify_by_pspec (G_OBJECT (self), pspecs[PROP_INITIAL_TITLE]);
+  g_object_notify_by_pspec (G_OBJECT (self), pspecs[PROP_INITIAL_PATH]);
+}
+
+
+static void inline
+schedule_clear_initial (KgxTab *self)
+{
+  KgxTabPrivate *priv = kgx_tab_get_instance_private (self);
+
+  g_clear_handle_id (&priv->initial_timeout, g_source_remove);
+  priv->initial_timeout = g_timeout_add_once (200, clear_initial, self);
+  g_source_set_name_by_id (priv->initial_timeout, "[kgx] clear initial title");
 }
 
 
@@ -372,17 +421,18 @@ kgx_tab_set_property (GObject      *object,
       g_set_object (&priv->terminal, g_value_get_object (value));
       break;
     case PROP_TAB_TITLE:
-      g_set_str (&priv->title, g_value_get_string (value));
+      kgx_set_str_prop (object, pspec, &priv->title, value);
       break;
     case PROP_TAB_PATH:
-      g_set_object (&priv->path, g_value_get_object (value));
+      if (g_set_object (&priv->path, g_value_get_object (value))) {
+        g_object_notify_by_pspec (object, pspec);
+      }
       break;
     case PROP_TAB_STATUS:
       set_status (self, g_value_get_flags (value));
       break;
     case PROP_TAB_TOOLTIP:
-      g_clear_pointer (&priv->tooltip, g_free);
-      priv->tooltip = g_value_dup_string (value);
+      kgx_set_str_prop (object, pspec, &priv->tooltip, value);
       break;
     case PROP_IS_ACTIVE:
       if (kgx_set_boolean_prop (object, pspec, &priv->is_active, value)) {
@@ -406,9 +456,18 @@ kgx_tab_set_property (GObject      *object,
     case PROP_DROPPING:
       kgx_set_boolean_prop (object, pspec, &priv->dropping, value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+    case PROP_INITIAL_TITLE:
+      if (kgx_set_str_prop (object, pspec, &priv->initial_title, value)) {
+        schedule_clear_initial (self);
+      }
       break;
+    case PROP_INITIAL_PATH:
+      if (g_set_object (&priv->initial_path, g_value_get_object (value))) {
+        schedule_clear_initial (self);
+        g_object_notify_by_pspec (object, pspecs[PROP_INITIAL_PATH]);
+      }
+      break;
+    KGX_INVALID_PROP (object, property_id, pspec);
   }
 }
 
@@ -526,6 +585,35 @@ kgx_tab_real_bell (KgxTab *self)
 }
 
 
+static gboolean
+spad_thrown (KgxSpadSource *source,
+             const char    *title,
+             GVariant      *bundle,
+             KgxTab        *self)
+{
+  KgxTabPrivate *priv = kgx_tab_get_instance_private (self);
+  AdwToast *toast = g_object_new (ADW_TYPE_TOAST,
+                                  "title", title,
+                                  "button-label", C_("toast-button", "_Details"),
+                                  "action-name", "tab.show-spad",
+                                  "action-target", bundle,
+                                  NULL);
+
+  adw_toast_overlay_add_toast (priv->toasts, toast);
+
+  return TRUE;
+}
+
+
+static void
+show_spad (GtkWidget                *widget,
+           G_GNUC_UNUSED const char *action,
+           GVariant                 *target)
+{
+  adw_dialog_present (kgx_spad_new_from_bundle (target), widget);
+}
+
+
 static void
 kgx_tab_class_init (KgxTabClass *klass)
 {
@@ -581,7 +669,7 @@ kgx_tab_class_init (KgxTabClass *klass)
   pspecs[PROP_TAB_TITLE] =
     g_param_spec_string ("tab-title", NULL, NULL,
                          NULL,
-                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                         G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
   /**
    * KgxTab:tab-path:
@@ -593,7 +681,7 @@ kgx_tab_class_init (KgxTabClass *klass)
   pspecs[PROP_TAB_PATH] =
     g_param_spec_object ("tab-path", NULL, NULL,
                          G_TYPE_FILE,
-                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                         G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
   pspecs[PROP_TAB_STATUS] =
     g_param_spec_flags ("tab-status", NULL, NULL,
@@ -604,7 +692,7 @@ kgx_tab_class_init (KgxTabClass *klass)
   pspecs[PROP_TAB_TOOLTIP] =
     g_param_spec_string ("tab-tooltip", NULL, NULL,
                          NULL,
-                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                         G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
   /**
    * KgxTab:is-active:
@@ -652,6 +740,16 @@ kgx_tab_class_init (KgxTabClass *klass)
     g_param_spec_object ("cancellable", NULL, NULL,
                          G_TYPE_CANCELLABLE,
                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  pspecs[PROP_INITIAL_TITLE] =
+    g_param_spec_string ("initial-title", NULL, NULL,
+                         NULL,
+                         G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
+
+  pspecs[PROP_INITIAL_PATH] =
+    g_param_spec_object ("initial-path", NULL, NULL,
+                         G_TYPE_FILE,
+                         G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
 
@@ -722,12 +820,19 @@ kgx_tab_class_init (KgxTabClass *klass)
   gtk_widget_class_bind_template_child_private (widget_class, KgxTab, train_signals);
   gtk_widget_class_bind_template_child_private (widget_class, KgxTab, terminal_signals);
   gtk_widget_class_bind_template_child_private (widget_class, KgxTab, drop_target);
+  gtk_widget_class_bind_template_child_private (widget_class, KgxTab, toasts);
 
   gtk_widget_class_bind_template_callback (widget_class, search_enabled);
   gtk_widget_class_bind_template_callback (widget_class, search_changed);
   gtk_widget_class_bind_template_callback (widget_class, search_next);
   gtk_widget_class_bind_template_callback (widget_class, search_prev);
   gtk_widget_class_bind_template_callback (widget_class, drop);
+  gtk_widget_class_bind_template_callback (widget_class, spad_thrown);
+
+  gtk_widget_class_install_action (widget_class,
+                                   "tab.show-spad",
+                                   "a{sv}",
+                                   show_spad);
 
   gtk_widget_class_set_css_name (widget_class, "kgx-tab");
 }
@@ -896,6 +1001,9 @@ kgx_tab_init (KgxTab *self)
                           self),
   g_signal_group_connect (priv->terminal_signals,
                           "bell", G_CALLBACK (bell),
+                          self),
+  g_signal_group_connect (priv->terminal_signals,
+                          "spad-thrown", G_CALLBACK (spad_thrown),
                           self),
 
   gtk_search_bar_connect_entry (GTK_SEARCH_BAR (priv->search_bar),
@@ -1074,18 +1182,11 @@ kgx_tab_set_initial_title (KgxTab     *self,
                            const char *title,
                            GFile      *path)
 {
-  KgxTabPrivate *priv;
-
   g_return_if_fail (KGX_IS_TAB (self));
 
-  priv = kgx_tab_get_instance_private (self);
-
-  if (priv->title || priv->path)
-    return;
-
   g_object_set (self,
-                "tab-title", title,
-                "tab-path", path,
+                "initial-title", title,
+                "initial-path", path,
                 NULL);
 }
 
