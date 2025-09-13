@@ -22,8 +22,12 @@
 
 #include <adwaita.h>
 
+#include "kgx-about.h"
 #include "kgx-application.h"
 #include "kgx-close-dialog.h"
+#include "kgx-empty.h"
+#include "kgx-file-closures.h"
+#include "kgx-fullscreen-box.h"
 #include "kgx-pages.h"
 #include "kgx-settings.h"
 #include "kgx-shared-closures.h"
@@ -204,7 +208,8 @@ kgx_window_close_request (GtkWindow *window)
   children = kgx_pages_get_children (KGX_PAGES (priv->pages));
 
   if (children->len < 1 || priv->close_anyway) {
-    if (gtk_window_is_active (GTK_WINDOW (self))) {
+    if (gtk_window_is_active (GTK_WINDOW (self)) &&
+        !adw_application_window_get_adaptive_preview (ADW_APPLICATION_WINDOW (self))) {
       gboolean maximised = gtk_window_is_maximized (GTK_WINDOW (self));
       int width, height;
 
@@ -228,10 +233,23 @@ kgx_window_close_request (GtkWindow *window)
 }
 
 
-static gboolean
-and (KgxWindow *self, gboolean a, gboolean b)
+static void
+fullscreened_changed (KgxWindow *self)
 {
-  return a && b;
+  gboolean fullscreen = gtk_window_is_fullscreen (GTK_WINDOW (self));
+  gtk_widget_action_set_enabled (GTK_WIDGET (self), "win.fullscreen", !fullscreen);
+  gtk_widget_action_set_enabled (GTK_WIDGET (self), "win.unfullscreen", fullscreen);
+}
+
+
+static char *
+content_or_empty (G_GNUC_UNUSED GObject *object, int n_pages)
+{
+  if (G_LIKELY (n_pages > 0)) {
+    return g_strdup ("content");
+  }
+
+  return g_strdup ("empty");
 }
 
 
@@ -380,105 +398,6 @@ breakpoint_unapplied (KgxWindow *self)
 }
 
 
-static char *
-title_or_fallback (GObject *object, const char *title)
-{
-  if (G_UNLIKELY (!title || !title[0])) {
-    return g_strdup (KGX_DISPLAY_NAME);
-  }
-
-  return g_strdup (title);
-}
-
-
-static char *
-path_as_subtitle (GObject *object, GFile *file, const char *window_title)
-{
-  g_autoptr (GFile) home = NULL;
-  g_autoptr (GError) error = NULL;
-  g_autofree char *path_raw = NULL;
-  g_autofree char *path_utf8 = NULL;
-  g_autofree char *path_rel_raw = NULL;
-  g_autofree char *path_rel_utf8 = NULL;
-  g_autofree char *short_home = NULL;
-  const char *home_path = NULL;
-
-  if (!file) {
-    return NULL;
-  }
-
-  path_raw = g_file_get_path (file);
-  if (G_UNLIKELY (!path_raw || g_strcmp0 (path_raw, window_title) == 0)) {
-    return NULL;
-  }
-
-  path_utf8 = g_filename_to_utf8 (path_raw, -1, NULL, NULL, &error);
-  if (G_UNLIKELY (error)) {
-    g_debug ("window: path had unexpected encoding (%s)", error->message);
-    return g_file_get_uri (file);
-  }
-
-  home_path = g_get_home_dir ();
-  if (G_UNLIKELY (!g_str_has_prefix (path_raw, home_path))) {
-    return g_steal_pointer (&path_utf8);
-  }
-
-  home = g_file_new_for_path (home_path);
-  if (!g_file_equal (home, file)) {
-    path_rel_raw = g_file_get_relative_path (home, file);
-    path_rel_utf8 = g_filename_to_utf8 (path_rel_raw, -1, NULL, NULL, &error);
-    if (G_UNLIKELY (error)) {
-      g_debug ("window: path had unexpected encoding (%s)", error->message);
-      return g_file_get_uri (file);
-    }
-
-    short_home = g_strdup_printf ("~/%s", path_rel_utf8);
-  } else {
-    short_home = g_strdup ("~");
-  }
-
-  if (G_LIKELY (g_strcmp0 (short_home, window_title) == 0)) {
-    /* Avoid duplicating the title */
-    return NULL;
-  }
-
-  return g_steal_pointer (&short_home);
-}
-
-
-static char *
-scale_as_label (GObject *object, double scale)
-{
-  return g_strdup_printf ("%i%%", (int) round (scale * 100));
-}
-
-
-static gboolean
-decoration_is_inverted (GObject    *object,
-                        const char *layout)
-{
-  g_auto (GStrv) sides = g_strsplit (layout, ":", 2);
-  int counts[2] = { 0 };
-
-  for (size_t i = 0; i < G_N_ELEMENTS (counts); i++) {
-    g_auto (GStrv) elements = NULL;
-
-    if (sides[i] == NULL)
-      continue;
-
-    elements = g_strsplit (sides[i], ",", -1);
-
-    for (size_t j = 0; elements[j]; j++) {
-      if (g_str_equal (elements[j], "close")) {
-        counts[i]++;
-      }
-    }
-  }
-
-  return counts[0] > counts[1];
-}
-
-
 static void
 close_tab_activated (GtkWidget  *widget,
                      const char *action_name,
@@ -544,31 +463,11 @@ new_tab_activated (GtkWidget  *widget,
 
 
 static void
-about_activated  (GtkWidget  *widget,
-                  const char *action_name,
-                  GVariant   *parameter)
+about_activated  (GtkWidget                *widget,
+                  G_GNUC_UNUSED const char *action_name,
+                  G_GNUC_UNUSED GVariant   *parameter)
 {
-  const char *developers[] = { "Zander Brown <zbrown@gnome.org>", NULL };
-  const char *designers[] = { "Tobias Bernard", NULL };
-  g_autofree char *copyright = NULL;
-
-  /* Translators: %s is the year range */
-  copyright = g_strdup_printf (_("© %s Zander Brown"), "2019-2025");
-
-  adw_show_about_dialog (widget,
-                         "application-name", KGX_DISPLAY_NAME,
-                         "application-icon", KGX_APPLICATION_ID,
-                         "developer-name", _("The GNOME Project"),
-                         "issue-url", "https://gitlab.gnome.org/GNOME/console/-/issues/",
-                         "website", "https://apps.gnome.org/en-GB/app/org.gnome.Console/",
-                         "version", PACKAGE_VERSION,
-                         "developers", developers,
-                         "designers", designers,
-                         /* Translators: Credit yourself here */
-                         "translator-credits", _("translator-credits"),
-                         "copyright", copyright,
-                         "license-type", GTK_LICENSE_GPL_3_0,
-                         NULL);
+  kgx_about_present_dialogue (widget);
 }
 
 
@@ -641,6 +540,8 @@ kgx_window_class_init (KgxWindowClass *klass)
                                             "win.find",
                                             "search-mode-enabled");
 
+  g_type_ensure (KGX_TYPE_EMPTY);
+  g_type_ensure (KGX_TYPE_FULLSCREEN_BOX);
   g_type_ensure (KGX_TYPE_PAGES);
   g_type_ensure (KGX_TYPE_THEME_SWITCHER);
 
@@ -654,7 +555,8 @@ kgx_window_class_init (KgxWindowClass *klass)
   gtk_widget_class_bind_template_child_private (widget_class, KgxWindow, settings_binds);
   gtk_widget_class_bind_template_child_private (widget_class, KgxWindow, surface_binds);
 
-  gtk_widget_class_bind_template_callback (widget_class, and);
+  gtk_widget_class_bind_template_callback (widget_class, fullscreened_changed);
+  gtk_widget_class_bind_template_callback (widget_class, content_or_empty);
   gtk_widget_class_bind_template_callback (widget_class, zoom);
   gtk_widget_class_bind_template_callback (widget_class, create_tearoff_host);
   gtk_widget_class_bind_template_callback (widget_class, maybe_close_window);
@@ -664,11 +566,13 @@ kgx_window_class_init (KgxWindowClass *klass)
   gtk_widget_class_bind_template_callback (widget_class, create_tab_cb);
   gtk_widget_class_bind_template_callback (widget_class, breakpoint_applied);
   gtk_widget_class_bind_template_callback (widget_class, breakpoint_unapplied);
-  gtk_widget_class_bind_template_callback (widget_class, title_or_fallback);
-  gtk_widget_class_bind_template_callback (widget_class, path_as_subtitle);
-  gtk_widget_class_bind_template_callback (widget_class, scale_as_label);
-  gtk_widget_class_bind_template_callback (widget_class, decoration_is_inverted);
+
   gtk_widget_class_bind_template_callback (widget_class, kgx_gtk_settings_for_display);
+  gtk_widget_class_bind_template_callback (widget_class, kgx_text_or_fallback);
+  gtk_widget_class_bind_template_callback (widget_class, kgx_bool_and);
+  gtk_widget_class_bind_template_callback (widget_class, kgx_format_percentage);
+  gtk_widget_class_bind_template_callback (widget_class, kgx_decoration_layout_is_inverted);
+  gtk_widget_class_bind_template_callback (widget_class, kgx_file_as_subtitle);
 
   gtk_widget_class_install_action (widget_class, "tab.close", NULL, close_tab_activated);
   gtk_widget_class_install_action (widget_class, "tab.detach", NULL, detach_tab_activated);
@@ -701,6 +605,15 @@ kgx_window_class_init (KgxWindowClass *klass)
                                    "win.show-preferences-window",
                                    NULL,
                                    show_preferences_window_activated);
+
+  gtk_widget_class_install_action (widget_class,
+                                   "win.fullscreen",
+                                   NULL,
+                                   (GtkWidgetActionActivateFunc) gtk_window_fullscreen);
+  gtk_widget_class_install_action (widget_class,
+                                   "win.unfullscreen",
+                                   NULL,
+                                   (GtkWidgetActionActivateFunc) gtk_window_unfullscreen);
 }
 
 
@@ -757,6 +670,8 @@ kgx_window_init (KgxWindow *self)
                                             GDK_ACTION_COPY,
                                             drop_types,
                                             G_N_ELEMENTS (drop_types));
+
+  fullscreened_changed (self);
 
   group = gtk_window_group_new ();
   gtk_window_group_add_window (group, GTK_WINDOW (self));

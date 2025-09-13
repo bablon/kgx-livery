@@ -76,6 +76,25 @@ G_BEGIN_DECLS
 
 
 /**
+ * KGX_INVALID_PROP:
+ * @object: the object the property was set on
+ * @property_id: the attempted property id
+ * @pspec: the @pspec of @property_id
+ *
+ * This is simple wrapper around G_OBJECT_WARN_INVALID_PROPERTY_ID that lets
+ * us easily ignore this in coverage reports.
+ *
+ * Whilst we could ‘test’ these lines, it's rather fiddly for really no
+ * reward, but if we can't easily exclude them they stand up in coverage like
+ * sore thumbs.
+ */
+#define KGX_INVALID_PROP(object, property_id, pspec)                         \
+    default:                                                                 \
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);        \
+      break;
+
+
+/**
  * kgx_set_boolean_prop:
  * @object: the #GObject the property is on
  * @pspec: the #GParamSpec being set
@@ -123,6 +142,65 @@ kgx_set_int64_prop (GObject      *restrict object,
                     const GValue *restrict value)
 {
   int64_t new_value = g_value_get_int64 (value);
+
+  if (new_value == *target) {
+    return FALSE;
+  }
+
+  *target = new_value;
+  g_object_notify_by_pspec (object, pspec);
+
+  return TRUE;
+}
+
+
+/**
+ * kgx_set_str_prop:
+ * @object: the #GObject the property is on
+ * @pspec: the #GParamSpec being set
+ * @target: the storage on @object for @pspec
+ * @value: the potential new value for @target
+ *
+ * Update a string property, notifying if the value changed
+ *
+ * Returns: %TRUE if the value changed, otherwise %FALSE
+ */
+static inline gboolean
+kgx_set_str_prop (GObject       *restrict object,
+                  GParamSpec    *restrict pspec,
+                  char         **restrict target,
+                  const GValue  *restrict value)
+{
+  const char *new_value = g_value_get_string (value);
+
+  if (!g_set_str (target, new_value)) {
+    return FALSE;
+  }
+
+  g_object_notify_by_pspec (object, pspec);
+
+  return TRUE;
+}
+
+
+/**
+ * kgx_set_flags_prop:
+ * @object: the #GObject the property is on
+ * @pspec: the #GParamSpec being set
+ * @target: the storage on @object for @pspec
+ * @value: the potential new value for @target
+ *
+ * Update an flag property, notifying if the value changed
+ *
+ * Returns: %TRUE if the value changed, otherwise %FALSE
+ */
+static inline gboolean
+kgx_set_flags_prop (GObject      *restrict object,
+                    GParamSpec   *restrict pspec,
+                    guint        *restrict target,
+                    const GValue *restrict value)
+{
+  guint new_value = g_value_get_flags (value);
 
   if (new_value == *target) {
     return FALSE;
@@ -185,7 +263,7 @@ kgx_str_constrained_dup (const char *source, size_t max_len)
   g_autoptr (GString) buffer = NULL;
   size_t source_len = strlen (source);
 
-  if (G_LIKELY (source_len < max_len)) {
+  if (G_LIKELY (source_len <= max_len)) {
     return g_strdup (source);
   }
 
@@ -194,6 +272,41 @@ kgx_str_constrained_dup (const char *source, size_t max_len)
   kgx_str_constrained_append (buffer, source, max_len);
 
   return g_string_free (g_steal_pointer (&buffer), FALSE);
+}
+
+
+static inline gboolean
+kgx_str_non_empty (const char *str)
+{
+  const char *first_non_space = str;
+
+  if (first_non_space == NULL) {
+    return FALSE;
+  }
+
+  while (*first_non_space &&
+         g_unichar_isspace (g_utf8_get_char (first_non_space))) {
+    first_non_space = g_utf8_next_char (first_non_space);
+  }
+
+  return *first_non_space;
+}
+
+
+/**
+ * kgx_uri_is_non_local_file:
+ * @uri: the uri to inspect
+ *
+ * Returns: %TRUE when this is both a file-uri *and* one that points to a
+ *          remote machine. All other uris are %FALSE.
+ */
+static inline gboolean
+kgx_uri_is_non_local_file (GUri *uri)
+{
+  return (g_strcmp0 (g_uri_get_scheme (uri), "file") == 0) &&
+         (kgx_str_non_empty (g_uri_get_host (uri)) &&
+          g_strcmp0 (g_uri_get_host (uri), "localhost") != 0 &&
+          g_strcmp0 (g_uri_get_host (uri), g_get_host_name ()) != 0);
 }
 
 

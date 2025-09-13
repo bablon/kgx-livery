@@ -1,5 +1,69 @@
-Version 48.0.1
-~~~~~~~~~~~~~~
+Version 49.0
+~~~~~~~~~~~~
+
+New Translations
+ * Interlingua  (Emilio Sepúlveda)
+
+Updated Translations
+ * Basque  (Asier Saratsua Garmendia)
+ * British English  (Andi Chandler)
+ * Catalan  (Francesc Busquets)
+ * Chinese (China)  (luming zh)
+ * Czech  (Daniel Rusek)
+ * Danish  (Ask Hjorth Larsen)
+ * Dutch  (Nathan Follens)
+ * Esperanto  (Kristjan SCHMIDT)
+ * Finnish  (Jiri Grönroos)
+ * Galician  (Francisco Diéguez Souto)
+ * Georgian  (Ekaterine Papava)
+ * German  (Froschi)
+ * Hungarian  (Balázs Úr)
+ * Japanese  (Jun Oyamada)
+ * Korean  (DaeHyun Sung)
+ * Lithuanian  (Aurimas Aurimas Černius)
+ * Spanish  (Daniel Mustieles)
+ * Swedish  (Anders Jonsson)
+ * Turkish  (Sabri Ünal)
+ * Ukrainian  (Yuri Chornoivan)
+
+Version 49.rc
+~~~~~~~~~~~~~
+
+We have headed to the big screen with a much anticipated fullscreen mode, in
+part made possible by the ever-improving libadwaita.
+
+A big focus this cycle has been error handling, to which end we now better
+report errors to the user, complete with debug information for bug reports, 
+and there also — helped by much expanded unit testing — should be far fewer
+opportunities for things going awry in the first place.
+
+This has also let to some improvements across Adwaita, Gtk, and GLib.
+
+Thanks again to Alice Mikhaylenko, Anders Jonsson, Daniel Rusek,
+Jordan Petridis, and Robert Kirkman, who all contributed to this release.
+
+New Translations
+ * Azerbaijani  (Ramal Rəhimov)
+ * Uzbek (Latin)  (Baxrom Raxmatov)
+
+Updated Translations
+ * Belarusian  (Vasil Pupkin)
+ * Brazilian Portuguese  (Rafael Fontenelle)
+ * Catalan  (Jordi Mas)
+ * Czech  (Daniel Rusek)
+ * Galician  (Fran Diéguez)
+ * Hebrew  (Yaron Shahrabani)
+ * Italian  (Davide Ferracin)
+ * Japanese  (Seiji Iizuka)
+ * Persian  (Danial Behzadi)
+ * Polish  (Piotr Drąg)
+ * Romanian  (Antonio Marin)
+ * Russian  (Artur S0)
+ * Slovak  (Peter Mráz)
+ * Slovenian  (Martin)
+ * Turkish  (Emin Tufan Çetin)
+ * Ukrainian  (Yuri Chornoivan)
+ * Vietnamese  (Cas Pascal)
 
 Version 48.0
 ~~~~~~~~~~~~

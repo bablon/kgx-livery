@@ -155,3 +155,12 @@ kgx-tab:drop(active) {
   background-color: color-mix(in srgb, var(--accent-bg-color) 35%, transparent);
   margin: 24px;
 }
+
+dialog.error-details textview {
+  background: none;
+  color: inherit;
+}
+
+.error-message {
+  font-size: 0.95em;
+}

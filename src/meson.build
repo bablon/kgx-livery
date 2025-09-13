@@ -1,3 +1,8 @@
+kgx_config_dep = declare_dependency(
+  sources: [configure_file(output: 'kgx-config.h', configuration: conf)],
+  include_directories: '.',
+)
+
 subdir('pids')
 
 kgx_sources = files(
@@ -17,10 +22,15 @@ kgx_sources = files(
   'kgx-drop-target.h',
   'kgx-empty.c',
   'kgx-empty.h',
+  'kgx-file-closures.h',
+  'kgx-fullscreen-box.c',
+  'kgx-fullscreen-box.h',
+  'kgx-icon-closures.h',
   'kgx-livery-manager.c',
   'kgx-livery-manager.h',
   'kgx-livery.c',
   'kgx-livery.h',
+  'kgx-locale.h',
   'kgx-pages.c',
   'kgx-pages.h',
   'kgx-palette.c',
@@ -36,10 +46,16 @@ kgx_sources = files(
   'kgx-shared-closures.h',
   'kgx-simple-tab.c',
   'kgx-simple-tab.h',
+  'kgx-spad-source.c',
+  'kgx-spad-source.h',
+  'kgx-spad.c',
+  'kgx-spad.h',
   'kgx-system-info.c',
   'kgx-system-info.h',
   'kgx-tab.c',
   'kgx-tab.h',
+  'kgx-templated.c',
+  'kgx-templated.h',
   'kgx-terminal.c',
   'kgx-terminal.h',
   'kgx-theme-switcher.c',
@@ -68,66 +84,82 @@ kgx_deps = [
   pcre_dep,
   schemas_dep,
   kgx_pids_dep,
+  kgx_config_dep,
   cc.find_library('m', required: false),
 ]
 
-kgx_sources += config_h
+kgx_generated_sources = [
+  vcs_tag(
+    input: 'kgx-git-tag.h.in',
+    output: 'kgx-git-tag.h',
+    command: ['git', 'rev-parse', '--short', 'HEAD'],
+    fallback: vcs_tag_fallback,
+  ),
+  gnome.compile_resources(
+    'kgx-resources',
+    configure_file(
+      input: 'kgx.gresource.xml.in',
+      output: 'kgx.gresource.xml',
+      configuration: conf,
+    ),
+    c_name: 'kgx',
+    dependencies: [
+      configure_file(
+        input: 'kgx-settings.ui.in',
+        output: 'kgx-settings.ui',
+        configuration: conf,
+      ),
+    ],
+  ),
+  gnome.genmarshal(
+    'kgx-marshals',
+    sources: 'kgx-marshals.list',
+    internal: true,
+    prefix: 'kgx_marshals',
+    valist_marshallers: true,
+  ),
+  gnome.gdbus_codegen(
+    'xdg-fm1',
+    sources: 'org.freedesktop.FileManager1.xml',
+    interface_prefix: 'org.freedesktop.',
+    namespace: 'Xdg',
+  ),
+  gnome.mkenums_simple(
+    'kgx-enums',
+    sources: files(
+      'kgx-close-dialog.h',
+      'kgx-colour-utils.h',
+      'kgx-paste-dialog.h',
+      'kgx-settings.h',
+      'kgx-spad.h',
+      'kgx-terminal.h',
+      'kgx-train.h',
+      'kgx-utils.h',
+    ),
+  ),
+]
 
-resources_file = configure_file(
-                       input: 'kgx.gresource.xml.in',
-                      output: 'kgx.gresource.xml',
-               configuration: conf
+kgx_lib = static_library(
+  bin_name,
+  kgx_sources + kgx_generated_sources,
+  dependencies: kgx_deps,
+  c_args: kgx_cargs,
+  install: false,
+  gnu_symbol_visibility: 'internal',
 )
 
-kgx_sources += gnome.compile_resources('kgx-resources',
-  resources_file,
-  c_name: 'kgx'
+kgx_dep = declare_dependency(
+  sources: [kgx_generated_sources, kgx_schemas],
+  include_directories: '.',
+  link_with: kgx_lib,
+  dependencies: kgx_deps,
 )
 
-kgx_sources += gnome.genmarshal('kgx-marshals',
-                  sources: 'kgx-marshals.list',
-                 internal: true,
-                   prefix: 'kgx_marshals',
-       valist_marshallers: true,
-)
-
-kgx_sources += gnome.gdbus_codegen('xdg-fm1',
-           sources: 'org.freedesktop.FileManager1.xml',
-  interface_prefix: 'org.freedesktop.',
-         namespace: 'Xdg',
-)
-
-kgx_enums = gnome.mkenums_simple('kgx-enums',
-                                    sources: [
-                                      'kgx-close-dialog.h',
-                                      'kgx-colour-utils.h',
-                                      'kgx-paste-dialog.h',
-                                      'kgx-settings.h',
-                                      'kgx-terminal.h',
-                                      'kgx-train.h',
-                                      'kgx-utils.h',
-                                    ])
-
-kgx_lib = static_library ( bin_name,
-                           kgx_sources + kgx_enums,
-             dependencies: kgx_deps,
-                   c_args: kgx_cargs,
-                  install: false,
-    gnu_symbol_visibility: 'internal',
-)
-kgx_inc = include_directories('.')
-
-kgx_dep = declare_dependency (
-                  sources: [config_h, kgx_enums, kgx_schemas],
-      include_directories: kgx_inc,
-                link_with: kgx_lib,
-             dependencies: kgx_deps
-)
-
-executable(                bin_name,
-                           'main.c',
-             dependencies: kgx_dep,
-                   c_args: kgx_cargs,
-                  install: true,
-    gnu_symbol_visibility: 'internal',
+executable(
+  bin_name,
+  'main.c',
+  dependencies: kgx_dep,
+  c_args: kgx_cargs,
+  install: true,
+  gnu_symbol_visibility: 'internal',
 )

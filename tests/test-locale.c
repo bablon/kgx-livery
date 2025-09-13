@@ -1,6 +1,6 @@
-/* kgx.h
+/* test-locale.c
  *
- * Copyright 2019 Zander Brown
+ * Copyright 2025 Zander Brown
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "kgx-config.h"
-#include "kgx-application.h"
-#include "kgx-window.h"
-#include "kgx-terminal.h"
-#include "kgx-enums.h"
-#include "kgx-process.h"
-#include "kgx-pages.h"
-#include "kgx-tab.h"
+
+#include "kgx-locale.h"
+
+
+static void
+test_locale_init (void)
+{
+  kgx_locale_init ("C.UTF-8");
+
+  g_assert_cmpstr (setlocale (LC_ALL, NULL), ==, "C.UTF-8");
+}
+
+
+int
+main (int argc, char *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+
+  g_test_add_func ("/kgx/locale/init", test_locale_init);
+
+  return g_test_run ();
+}

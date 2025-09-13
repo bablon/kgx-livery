@@ -1,11 +1,14 @@
 include:
-  - project: 'gnome/citemplates'
-    file: 'flatpak/flatpak_ci_initiative.yml'
+  - project: "gnome/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
   - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
     inputs:
       job-stage: "release"
       dist-job-name: "release-tarball"
       tarball-artifact-path: "build/meson-dist/gnome-console-$CI_COMMIT_TAG.tar.xz"
+  - component: "gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master"
+    inputs:
+      lsan-options: "suppressions=${CI_PROJECT_DIR}/tests/lsan.supp"
 
 variables:
   MANIFEST_PATH: "build-aux/flatpak/org.gnome.Console.Devel.json"
@@ -17,21 +20,36 @@ variables:
   BUNDLE: "org.gnome.Console.Devel.flatpak"
   FEDORA_IMAGE: fedora:latest
   FEDORA_DEPS: appstream
+    colord
+    dbus-daemon
     desktop-file-utils
     gcc
     gcovr
     git
-    meson
-    pkgconfig(libadwaita-1)
-    pkgconfig(gtk4)
-    pkgconfig(pango)
-    pkgconfig(vte-2.91-gtk4)
+    glslc
+    mutter
+    ninja-build
+    pipx
+    pkgconfig(fmt)
     pkgconfig(gio-2.0)
     pkgconfig(gio-unix-2.0)
-    pkgconfig(libpcre2-8)
     pkgconfig(gsettings-desktop-schemas)
+    pkgconfig(gstreamer-allocators-1.0)
+    pkgconfig(gstreamer-gl-1.0)
+    pkgconfig(gstreamer-player-1.0)
+    pkgconfig(gtk4)
+    pkgconfig(libadwaita-1)
     pkgconfig(libgtop-2.0)
-  FEDORA_32_IMAGE: fedora:rawhide
+    pkgconfig(libpcre2-8)
+    pkgconfig(librsvg-2.0)
+    pkgconfig(pango)
+    pkgconfig(simdutf)
+    pkgconfig(vte-2.91-gtk4)
+    pkgconfig(wayland-client)
+    pkgconfig(wayland-egl)
+    pkgconfig(wayland-protocols)
+    sassc
+  FEDORA_32_IMAGE: fedora:latest
   FEDORA_32_DEPS: appstream-devel.i686
     appstream.i686
     at-spi2-atk-devel.i686
@@ -54,8 +72,10 @@ variables:
     check.i686
     clang-libs.i686
     clang.i686
+    colord
     colord-libs.i686
     cups-libs.i686
+    dbus-daemon
     dbus-devel.i686
     dbus-libs.i686
     desktop-file-utils
@@ -66,6 +86,8 @@ variables:
     expat-devel.i686
     fast_float-devel
     flac-libs.i686
+    fmt-devel.i686
+    fmt.i686
     fontconfig-devel.i686
     fontconfig.i686
     freetype-devel.i686
@@ -147,6 +169,8 @@ variables:
     libpkgconf.i686
     libpng-devel.i686
     libpsl-devel.i686
+    librsvg2-devel.i686
+    librsvg2.i686
     libselinux-devel.i686
     libsepol-devel.i686
     libsoup.i686
@@ -197,8 +221,9 @@ variables:
     mesa-libgbm-devel.i686
     mesa-libgbm.i686
     mesa-libGL.i686
-    meson
+    mutter
     nettle-devel.i686
+    ninja-build
     orc-devel.i686
     p11-kit-devel.i686
     pango-devel.i686
@@ -208,12 +233,15 @@ variables:
     pcre2-utf32.i686
     pcre2.i686
     pipewire-libs.i686
+    pipx
     pixman-devel.i686
     pixman.i686
     pkgconf-pkg-config.i686
     pkgconf.i686
     polkit-libs.i686
     sassc
+    simdutf-devel.i686
+    simdutf.i686
     sqlite-devel.i686
     sqlite.i686
     subunit-devel.i686
@@ -231,30 +259,34 @@ variables:
 
 stages:
   - build
-  - test
+  - report
+  - deploy
   - release
 
-flatpak:
+flatpak@x86_64:
   stage: build
-  extends: .flatpak
+  extends: ".flatpak@x86_64"
 
-flatpak-aarch64:
+flatpak@aarch64:
   stage: build
   extends: ".flatpak@aarch64"
 
 .fedora-build:
   stage: build
+  variables:
+    LC_ALL: C.UTF-8
   before_script:
     - dnf update -y --nogpgcheck
     - dnf install -y --nogpgcheck ${DNF_DEPS}
+    - export PATH=$PATH:/root/.local/bin
+    - pipx install meson
   script:
-    - export LC_ALL=C.UTF-8
+    - export XDG_RUNTIME_DIR="$(mktemp -p $(pwd) -d xdg-runtime-XXXXXX)"
     - meson setup build ${MESON_EXTRA_ARGS} -Db_coverage=true -Dtests=true
     - meson compile -C build
-    - meson test -C build
+    - dbus-run-session -- mutter --headless --wayland --no-x11 --virtual-monitor 1024x768 -- meson test -C build
   after_script:
-    - gcovr --exclude="build/*" --exclude="subprojects/"
-      --json --output=coverage-${CI_JOB_NAME}.json
+    - gcovr --json --output=coverage-${CI_JOB_NAME}.json
   artifacts:
     when: always
     paths:
@@ -279,7 +311,7 @@ fedora-32-clang:
 
 coverage:
   image: $FEDORA_IMAGE
-  stage: test
+  stage: report
   before_script:
     - dnf update -y --nogpgcheck
     - dnf install -y --nogpgcheck gcovr
@@ -305,14 +337,18 @@ coverage:
 release-tarball:
   image: $FEDORA_IMAGE
   stage: release
+  variables:
+    LC_ALL: C.UTF-8
   before_script:
     - dnf update -y --nogpgcheck
     - dnf install -y --nogpgcheck ${FEDORA_DEPS}
+    - export PATH=$PATH:/root/.local/bin
+    - pipx install meson
   script:
-    - export LC_ALL=C.UTF-8
+    - export XDG_RUNTIME_DIR="$(mktemp -p $(pwd) -d xdg-runtime-XXXXXX)"
     - git config --global --add safe.directory $CI_PROJECT_DIR
     - meson setup build
-    - meson dist -C build
+    - dbus-run-session -- mutter --headless --wayland --no-x11 --virtual-monitor 1024x768 -- meson dist -C build
   artifacts:
     paths:
       - "build/meson-dist/*.xz"

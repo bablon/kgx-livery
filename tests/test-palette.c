@@ -36,7 +36,7 @@ test_palette_new (void)
                                                     &((GdkRGBA) { 0, }),
                                                     0.0,
                                                     0,
-                                                    NULL);
+                                                    ((GdkRGBA []) { 0, }));
 
   kgx_palette_ref (palette);
   kgx_palette_unref (palette);
@@ -50,7 +50,7 @@ test_palette_transparency (void)
                                                     &((GdkRGBA) { 0, }),
                                                     0.5,
                                                     0,
-                                                    NULL);
+                                                    ((GdkRGBA []) { 0, }));
   g_autoptr (KgxPalette) opaque_palette = NULL;
 
   g_assert_cmpfloat (kgx_palette_get_transparency (palette), ==, 0.5);
@@ -69,7 +69,7 @@ test_palette_opaque (void)
                                                     &((GdkRGBA) { 0, }),
                                                     0.0,
                                                     0,
-                                                    NULL);
+                                                    ((GdkRGBA []) { 0, }));
   g_autoptr (KgxPalette) opaque_palette = NULL;
 
   g_assert_cmpfloat (kgx_palette_get_transparency (palette), ==, 0.0);
@@ -184,6 +184,39 @@ test_palette_deserialise (void)
 }
 
 
+static void
+test_palette_set_palette (void)
+{
+  g_autoptr (KgxPalette) palette_a = kgx_palette_new (&((GdkRGBA) { 0, }),
+                                                      &((GdkRGBA) { 0, }),
+                                                      0.0,
+                                                      0,
+                                                      ((GdkRGBA []) { 0, }));
+  g_autoptr (KgxPalette) palette_b = kgx_palette_new (&((GdkRGBA) { 0, }),
+                                                      &((GdkRGBA) { 0, }),
+                                                      0.0,
+                                                      0,
+                                                      ((GdkRGBA []) { 0, }));
+
+
+  g_assert_true (kgx_set_palette (&palette_a, palette_b));
+  g_assert_true (palette_a == palette_b);
+}
+
+
+static void
+test_palette_set_palette_same (void)
+{
+  g_autoptr (KgxPalette) palette = kgx_palette_new (&((GdkRGBA) { 0, }),
+                                                    &((GdkRGBA) { 0, }),
+                                                    0.0,
+                                                    0,
+                                                    ((GdkRGBA []) { 0, }));
+
+  g_assert_false (kgx_set_palette (&palette, palette));
+}
+
+
 int
 main (int argc, char *argv[])
 {
@@ -196,6 +229,8 @@ main (int argc, char *argv[])
   g_test_add_func ("/kgx/palette/colours", test_palette_colours);
   g_test_add_func ("/kgx/palette/serialise", test_palette_serialise);
   g_test_add_func ("/kgx/palette/deserialise", test_palette_deserialise);
+  g_test_add_func ("/kgx/palette/set_palette", test_palette_set_palette);
+  g_test_add_func ("/kgx/palette/set_palette_same", test_palette_set_palette_same);
 
   return g_test_run ();
 }
