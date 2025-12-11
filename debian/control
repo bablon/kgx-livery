@@ -1,6 +1,5 @@
 Source: gnome-console
 Section: gnome
-Priority: optional
 Maintainer: Debian GNOME Maintainers <pkg-gnome-maintainers@lists.alioth.debian.org>
 Uploaders: Jeremy Bícha <jbicha@ubuntu.com>, Arnaud Ferraris <aferraris@debian.org>
 Build-Depends:
