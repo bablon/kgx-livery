@@ -3,18 +3,13 @@
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,-O1 -Wl,-z,defs
 
-ifeq ($(filter nocheck,$(DEB_BUILD_OPTIONS)),)
-	MESON_OPTS += -Dtests=true
-else
-	MESON_OPTS += -Dtests=false
-endif
-
 %:
 	dh $@
 
 override_dh_auto_configure:
-	dh_auto_configure -- $(MESON_OPTS) \
-		-Dauto_features=enabled
+	dh_auto_configure -- \
+		-Dauto_features=enabled \
+		-Dtests=$(if $(filter nocheck,$(DEB_BUILD_OPTIONS)),false,true) \
 
 override_dh_auto_test:
 	dbus-run-session -- xvfb-run -a dh_auto_test
