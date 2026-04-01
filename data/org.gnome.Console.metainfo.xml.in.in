@@ -12,11 +12,11 @@
       A simple user-friendly terminal emulator for the GNOME desktop.
     </p>
   </description>
-  <recommends>
+  <supports>
     <control>keyboard</control>
     <control>pointing</control>
     <control>touch</control>
-  </recommends>
+  </supports>
   <requires>
     <display_length compare="ge">360</display_length>
   </requires>
@@ -27,29 +27,60 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="49.2" date="2025-12-25" type="stable">
+    <release version="50.0" date="2026-03-16" type="stable">
       <description>
         <p>Updated Translations:</p>
         <ul>
-          <li>German</li>
-          <li>Norwegian Bokmål</li>
-          <li>Serbian (Latin)</li>
-          <li>Serbian</li>
+          <li>Thai</li>
         </ul>
       </description>
     </release>
-    <release version="49.1" date="2025-10-19" type="stable">
+    <release version="50~rc" date="2026-03-11" type="development">
       <description>
         <p>New Translations:</p>
         <ul>
+          <li>Cornish</li>
           <li>Uighur</li>
         </ul>
         <p>Updated Translations:</p>
         <ul>
+          <li>Basque</li>
+          <li>Brazilian Portuguese</li>
+          <li>British English</li>
           <li>Bulgarian</li>
+          <li>Catalan</li>
+          <li>Chinese (China)</li>
+          <li>Chinese (Taiwan)</li>
+          <li>Czech</li>
+          <li>Danish</li>
+          <li>Dutch</li>
+          <li>Finnish</li>
+          <li>French</li>
+          <li>Galician</li>
+          <li>Georgian</li>
+          <li>German</li>
           <li>Greek</li>
+          <li>Hebrew</li>
+          <li>Hungarian</li>
+          <li>Indonesian</li>
+          <li>Japanese</li>
+          <li>Kazakh</li>
+          <li>Korean</li>
+          <li>Lithuanian</li>
+          <li>Nepali</li>
           <li>Occitan</li>
+          <li>Persian</li>
+          <li>Polish</li>
           <li>Portuguese</li>
+          <li>Romanian</li>
+          <li>Russian</li>
+          <li>Serbian</li>
+          <li>Serbian (Latin)</li>
+          <li>Slovenian</li>
+          <li>Spanish</li>
+          <li>Swedish</li>
+          <li>Turkish</li>
+          <li>Ukrainian</li>
         </ul>
       </description>
     </release>

@@ -1,22 +1,24 @@
 # Bulgarian translation of console po-file.
-# Copyright (C) 2022, 2023, 2024 Alexander Shopov.
+# Copyright (C) 2022, 2023, 2024, 2026 Alexander Shopov.
+# Copyright (C) 2026 twlvnn kraftwerk.
 # This file is distributed under the same license as the console package.
-# Alexander Shopov <ash@kambanaria.org> 2022, 2023, 2024.
+# Alexander Shopov <ash@kambanaria.org> 2022, 2023, 2024, 2026.
+# twlvnn kraftwerk <kraft_werk@tutanota.com> 2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: console main\n"
 "Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/console/-/issues/\n"
-"POT-Creation-Date: 2025-09-20 01:33+0000\n"
-"PO-Revision-Date: 2025-09-20 16:12+0200\n"
-"Last-Translator: twlvnn kraftwerk <kraft_werk@tutanota.com>\n"
+"POT-Creation-Date: 2025-12-28 14:23+0000\n"
+"PO-Revision-Date: 2026-02-06 11:51+0100\n"
+"Last-Translator: Alexander Shopov <ash@kambanaria.org>\n"
 "Language-Team: Bulgarian <dict@fsa-bg.org>\n"
 "Language: bg\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.7\n"
+"X-Generator: Poedit 3.8\n"
 
 #: data/org.gnome.Console.desktop.in.in:2
 #: data/org.gnome.Console.metainfo.xml.in.in:8 src/kgx-application.h:26
@@ -78,6 +80,8 @@ msgid "translator-credits"
 msgstr ""
 "Александър Шопов &lt;<a href='mailto:ash@kambanaria.org'>ash@kambanaria.org</"
 "a>&gt;\n"
+"twlvnn kraftwerk &lt;<a "
+"href='mailto:kraft_werk@tutanota.com'>kraft_werk@tutanota.com</a>&gt;\n"
 "\n"
 "\n"
 "Проектът за превод на GNOME има нужда от подкрепа.\n"
@@ -206,7 +210,7 @@ msgstr "Низът за цвят е с неправилна дължина"
 #: src/kgx-drop-target.c:509
 msgctxt "toast-message"
 msgid "Drop Failed"
-msgstr "Пускането е неуспешно"
+msgstr "Неуспешно пускане"
 
 #: src/kgx-drop-target.c:201 src/kgx-drop-target.c:253
 msgctxt "spad-message"
@@ -214,8 +218,8 @@ msgid ""
 "An unexpected error occurred whilst receiving a URI list drop. Please "
 "include the following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при получаването на списък с адреси. Добавете "
-"следната информация, ако докладвате грешката."
+"Неочаквана грешка при получаване на списък с адреси. Включете следната "
+"информация, когато докладвате грешката."
 
 #: src/kgx-drop-target.c:337
 msgctxt "spad-message"
@@ -223,8 +227,8 @@ msgid ""
 "An unexpected error occurred whilst receiving a file list drop. Please "
 "include the following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при получаването на списък с файлове. Добавете "
-"следната информация, ако докладвате грешката."
+"Неочаквана грешка при получаването на списък с файлове. Включете следната "
+"информация, когато докладвате грешката."
 
 #: src/kgx-drop-target.c:371
 msgctxt "spad-message"
@@ -232,8 +236,8 @@ msgid ""
 "An unexpected error occurred whilst receiving a text drop. Please include "
 "the following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при получаването на текстово съобщение. Добавете "
-"следната информация, ако докладвате грешката."
+"Неочаквана грешка при получаването на текстово съобщение. Включете следната "
+"информация, когато докладвате грешката."
 
 #: src/kgx-drop-target.c:512
 msgctxt "spad-message"
@@ -241,7 +245,7 @@ msgid ""
 "An unexpected value was received. Please include the following information "
 "if you report the error."
 msgstr ""
-"Получена е неочаквана стойност. Добавете следната информация, ако докладвате "
+"Неочаквана стойност. Включете следната информация, когато докладвате "
 "грешката."
 
 #: src/kgx-livery-manager.c:193
@@ -254,20 +258,31 @@ msgctxt "livery-name"
 msgid "XTerm"
 msgstr "XTerm"
 
+#. Translators: columns by rows, describing terminal size
+#: src/kgx-pages.c:298
+#, c-format
+msgid "%i by %i"
+msgstr "%i от %i"
+
+#: src/kgx-pages.c:299
+#, c-format
+msgid "%i columns %i rows"
+msgstr "%i колони, %i рѐда"
+
 #. Translators: %i is, from the users perspective, a random number.
 #. * this string will only be seen when the running program has
 #. * failed to set a title, and exists purely to avoid blank tabs
 #.
-#: src/kgx-pages.c:495
+#: src/kgx-pages.c:508
 #, c-format
 msgid "Tab %i"
 msgstr "Подпрозорец %i"
 
-#: src/kgx-pages.ui:100
+#: src/kgx-pages.ui:101
 msgid "_Detach Tab"
 msgstr "_Отделяне на подпрозореца"
 
-#: src/kgx-pages.ui:106 src/kgx-spad.c:203 src/kgx-spad.c:372
+#: src/kgx-pages.ui:107 src/kgx-spad.c:203 src/kgx-spad.c:372
 msgid "_Close"
 msgstr "_Затваряне"
 
@@ -310,7 +325,7 @@ msgid ""
 "Opening ‘<a href=\"%s\">%s</a>’ failed:\n"
 "%s"
 msgstr ""
-"„<a href=\"%s\">%s</a>“ не може да се отвори:\n"
+"Неуспешно отваряне на „<a href='%s'>%s</a>“:\n"
 "%s"
 
 #: src/kgx-spad.c:339 src/kgx-spad.ui:4
@@ -366,7 +381,7 @@ msgstr "Следваща поява"
 #: src/kgx-terminal.c:39
 msgctxt "toast-message"
 msgid "Couldn't Open Link"
-msgstr "Връзката не може да бъде отворена"
+msgstr "Връзката не може да се отвори"
 
 #: src/kgx-terminal.c:360
 #, c-format
@@ -375,7 +390,7 @@ msgid ""
 "The link “<a href=\"%s\">%s</a>” uses the protocol “%s”, for which no apps "
 "are installed."
 msgstr ""
-"Връзката „<a href=\"%s\">%s</a>” използва протокола „%s”, за който няма "
+"Връзката „<a href='%s'>%s</a>” използва протокола „%s”, за който няма "
 "инсталирани програми."
 
 #: src/kgx-terminal.c:373
@@ -385,14 +400,14 @@ msgid ""
 "An unexpected error occurred whilst opening the link “<a href=\"%s\">%s</"
 "a>”. Please include the following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при отварянето на връзката „<a href=\"%s\">%s</"
-"a>”. Включете следната информация, ако докладвате грешката."
+"Неочаквана грешка при отварянето на връзката „<a href='%s'>%s</a>”. Включете "
+"следната информация, когато докладвате грешката."
 
 #: src/kgx-terminal.c:421
 #, c-format
 msgctxt "spad-message"
 msgid "The link “<a href=\"%s\">%s</a>” is malformed."
-msgstr "Връзката „<a href=\"%s\">%s</a>” е лошо форматирана."
+msgstr "Лошо Форматирана връзка: „<a href=%s'>%s</a>”."
 
 #: src/kgx-terminal.c:440
 #, c-format
@@ -403,10 +418,9 @@ msgid ""
 "\n"
 "This device is “%s” and the location is on “%s”."
 msgstr ""
-"Връзката „<a href=\"%s\">%s</a>” сочи към местоположение на друго "
-"устройство.\n"
+"Връзката „<a href='%s'>%s</a>” сочи към местоположение на друго устройство.\n"
 "\n"
-"Това устройство е „%s”, а местоположението е на „%s”."
+"Това устройство е „%s”, а мястото е на „%s”."
 
 #: src/kgx-terminal.c:511
 msgctxt "toast-message"
@@ -419,13 +433,13 @@ msgid ""
 "An unexpected error occurred whilst reading the clipboard. Please include "
 "the following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при четенето на буфера за обмен. Добавете "
-"следната информация, ако докладвате грешката."
+"Неочаквана грешка при четенето от буфера за обмен. Включете следната "
+"информация, когато докладвате грешката."
 
 #: src/kgx-terminal.c:575
 msgctxt "toast-message"
 msgid "Couldn't Show File"
-msgstr "Файлът не може да бъде показан"
+msgstr "Файлът не може да се покаже"
 
 #: src/kgx-terminal.c:578
 msgctxt "spad-message"
@@ -433,13 +447,13 @@ msgid ""
 "An unexpected error occurred whilst showing the file. Please include the "
 "following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при показването на файла. Добавете следната "
-"информация, ако докладвате грешката."
+"Неочаквана грешка при показването на файла. Включете следната информация, "
+"когато докладвате грешката."
 
 #: src/kgx-terminal.c:599
 msgctxt "toast-message"
 msgid "Couldn't Open Folder"
-msgstr "Папката не може да бъде отворена"
+msgstr "Папката не може да се отвори"
 
 #: src/kgx-terminal.c:602
 msgctxt "spad-message"
@@ -447,8 +461,8 @@ msgid ""
 "An unexpected error occurred whilst opening the folder. Please include the "
 "following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при отварянето на папката. Добавете следната "
-"информация, ако докладвате грешката."
+"Неочаквана грешка при отварянето на папката. Включете следната информация, "
+"когато докладвате грешката."
 
 #: src/kgx-terminal.c:696
 #, c-format
@@ -462,7 +476,7 @@ msgstr ""
 #: src/kgx-terminal.c:984
 msgctxt "toast-message"
 msgid "Couldn't Paste"
-msgstr "Не може да се постави"
+msgstr "Неуспешно поставяне"
 
 #: src/kgx-terminal.c:987
 msgctxt "spad-message"
@@ -470,8 +484,8 @@ msgid ""
 "An unexpected error occurred whilst processing the clipboard. Please include "
 "the following information if you report the error."
 msgstr ""
-"Възникна неочаквана грешка при обработката на буфера за обмен. Добавете "
-"следната информация, ако докладвате грешката."
+"Неочаквана грешка при обработването на буфера за обмен. Включете следната "
+"информация, когато докладвате грешката."
 
 #: src/kgx-terminal.ui:7
 msgid "_Open Link"
@@ -479,7 +493,7 @@ msgstr "_Отваряне на връзка"
 
 #: src/kgx-terminal.ui:12
 msgid "Copy _Link Address"
-msgstr "Копиране на _адреса"
+msgstr "Копиране на адреса на _връзката"
 
 #: src/kgx-terminal.ui:19
 msgid "_Copy"
@@ -491,7 +505,7 @@ msgstr "_Избор на всичко"
 
 #: src/kgx-terminal.ui:36 src/kgx-window.ui:285
 msgid "Leave _Fullscreen"
-msgstr "Изход от _цял екран"
+msgstr "Излизане от _цял екран"
 
 #: src/kgx-terminal.ui:43
 msgid "Show in _Files"
@@ -611,7 +625,7 @@ msgid "Custom _Font"
 msgstr "Шрифт по _избор"
 
 #: src/preferences/kgx-preferences-window.ui:61
-msgid "Behaviour"
+msgid "Behavior"
 msgstr "Поведение"
 
 #: src/preferences/kgx-preferences-window.ui:64
@@ -626,11 +640,15 @@ msgstr "_Редове за придвижване назад"
 msgid "Terminal Bell"
 msgstr "Терминален звънец"
 
-#: src/preferences/kgx-preferences-window.ui:93
+#: src/preferences/kgx-preferences-window.ui:91
+msgid "Control how alerts are indicated"
+msgstr "Настройване на извеждането на известията"
+
+#: src/preferences/kgx-preferences-window.ui:94
 msgid "Play _Sound"
 msgstr "Изпълнение на _звук"
 
-#: src/preferences/kgx-preferences-window.ui:99
+#: src/preferences/kgx-preferences-window.ui:100
 msgid "_Visual Effects"
 msgstr "_Визуални ефекти"
 
@@ -713,3 +731,13 @@ msgstr "Преход към подпрозорец 1-9"
 msgctxt "shortcut window"
 msgid "Switch to Tab 10"
 msgstr "Преход към подпрозорец 10"
+
+#: src/shortcuts-dialog.ui:116
+msgctxt "shortcut window"
+msgid "Window"
+msgstr "Нов прозорец"
+
+#: src/shortcuts-dialog.ui:119
+msgctxt "shortcut window"
+msgid "Fullscreen"
+msgstr "Цял екран"

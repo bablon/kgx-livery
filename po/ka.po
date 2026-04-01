@@ -1,14 +1,14 @@
 # Georgian translation for Console.
 # Copyright (C) 2023 console's authors
 # This file is distributed under the same license as the console package.
-# Ekaterine Papava <papava.e@gtu.ge>, 2023-2025.
+# Ekaterine Papava <papava.e@gtu.ge>, 2023-2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: console\n"
 "Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/console/-/issues/\n"
-"POT-Creation-Date: 2025-08-31 08:05+0000\n"
-"PO-Revision-Date: 2025-09-04 12:18+0200\n"
+"POT-Creation-Date: 2025-12-28 14:23+0000\n"
+"PO-Revision-Date: 2026-01-25 11:19+0100\n"
 "Last-Translator: Ekaterine Papava <papava.e@gtu.ge>\n"
 "Language-Team: Georgian <(nothing)>\n"
 "Language: ka\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.7\n"
+"X-Generator: Poedit 3.8\n"
 
 #: data/org.gnome.Console.desktop.in.in:2
 #: data/org.gnome.Console.metainfo.xml.in.in:8 src/kgx-application.h:26
@@ -49,7 +49,7 @@ msgstr "მარტივი და ადვილად მოსახმა
 msgid "Terminal window"
 msgstr "ტერმინალის ფანჯარა"
 
-#: data/org.gnome.Console.metainfo.xml.in.in:533 src/kgx-about.c:166
+#: data/org.gnome.Console.metainfo.xml.in.in:564 src/kgx-about.c:166
 msgid "The GNOME Project"
 msgstr "პროექტი \"GNOME\""
 
@@ -244,20 +244,31 @@ msgctxt "livery-name"
 msgid "XTerm"
 msgstr "Xterm"
 
+#. Translators: columns by rows, describing terminal size
+#: src/kgx-pages.c:298
+#, c-format
+msgid "%i by %i"
+msgstr "%i. ავტორი: %i"
+
+#: src/kgx-pages.c:299
+#, c-format
+msgid "%i columns %i rows"
+msgstr "%i სვეტი %i მწკრივი"
+
 #. Translators: %i is, from the users perspective, a random number.
 #. * this string will only be seen when the running program has
 #. * failed to set a title, and exists purely to avoid blank tabs
 #.
-#: src/kgx-pages.c:495
+#: src/kgx-pages.c:508
 #, c-format
 msgid "Tab %i"
 msgstr "ჩანართი %i"
 
-#: src/kgx-pages.ui:100
+#: src/kgx-pages.ui:101
 msgid "_Detach Tab"
 msgstr "ჩანართის მოძრობა"
 
-#: src/kgx-pages.ui:106 src/kgx-spad.c:203 src/kgx-spad.c:372
+#: src/kgx-pages.ui:107 src/kgx-spad.c:203 src/kgx-spad.c:372
 msgid "_Close"
 msgstr "დახურვა"
 
@@ -599,7 +610,7 @@ msgid "Custom _Font"
 msgstr "მომხმარებლის _ფონტი"
 
 #: src/preferences/kgx-preferences-window.ui:61
-msgid "Behaviour"
+msgid "Behavior"
 msgstr "ქცევა"
 
 #: src/preferences/kgx-preferences-window.ui:64
@@ -614,11 +625,15 @@ msgstr "ჩოჩიი_ს ხაზები"
 msgid "Terminal Bell"
 msgstr "ტერმინალის ზარი"
 
-#: src/preferences/kgx-preferences-window.ui:93
+#: src/preferences/kgx-preferences-window.ui:91
+msgid "Control how alerts are indicated"
+msgstr "მართეთ, როგორ მოხდება განგაშების ჩვენება"
+
+#: src/preferences/kgx-preferences-window.ui:94
 msgid "Play _Sound"
 msgstr "ხმის _დაკვრა"
 
-#: src/preferences/kgx-preferences-window.ui:99
+#: src/preferences/kgx-preferences-window.ui:100
 msgid "_Visual Effects"
 msgstr "ვიზუალური _ეფექტები"
 
@@ -701,6 +716,16 @@ msgstr "1-9-ე ჩანართზე გადართვა"
 msgctxt "shortcut window"
 msgid "Switch to Tab 10"
 msgstr "გადართე·10·ჩანართზე"
+
+#: src/shortcuts-dialog.ui:116
+msgctxt "shortcut window"
+msgid "Window"
+msgstr "ფანჯარა"
+
+#: src/shortcuts-dialog.ui:119
+msgctxt "shortcut window"
+msgid "Fullscreen"
+msgstr "სრულ ეკრანზე"
 
 #~ msgid "King’s Cross"
 #~ msgstr "King’s Cross"

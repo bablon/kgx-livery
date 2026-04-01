@@ -37,10 +37,12 @@ kgx_sources = files(
   'kgx-palette.h',
   'kgx-paste-dialog.c',
   'kgx-paste-dialog.h',
+  'kgx-playbox.h',
   'kgx-process.c',
   'kgx-process.h',
   'kgx-proxy-info.c',
   'kgx-proxy-info.h',
+  'kgx-remote.h',
   'kgx-settings.c',
   'kgx-settings.h',
   'kgx-shared-closures.h',
@@ -75,6 +77,7 @@ kgx_sources = files(
 )
 
 kgx_deps = [
+  glib_dep,
   gio_dep,
   gio_unix_dep,
   pango_dep,

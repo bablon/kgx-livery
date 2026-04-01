@@ -184,6 +184,36 @@ kgx_set_str_prop (GObject       *restrict object,
 
 
 /**
+ * kgx_set_enum_prop:
+ * @object: the #GObject the property is on
+ * @pspec: the #GParamSpec being set
+ * @target: the storage on @object for @pspec
+ * @value: the potential new value for @target
+ *
+ * Update an enum property, notifying if the value changed
+ *
+ * Returns: %TRUE if the value changed, otherwise %FALSE
+ */
+static inline gboolean
+kgx_set_enum_prop (GObject      *restrict object,
+                   GParamSpec   *restrict pspec,
+                   int          *restrict target,
+                   const GValue *restrict value)
+{
+  int new_value = g_value_get_enum (value);
+
+  if (new_value == *target) {
+    return FALSE;
+  }
+
+  *target = new_value;
+  g_object_notify_by_pspec (object, pspec);
+
+  return TRUE;
+}
+
+
+/**
  * kgx_set_flags_prop:
  * @object: the #GObject the property is on
  * @pspec: the #GParamSpec being set
@@ -219,8 +249,8 @@ kgx_set_flags_prop (GObject      *restrict object,
  * @source: the text to read from
  * @max_len: the maximum length @buffer should expand to
  *
- * Writes @source to @buffer, but stopping if @buffer reachs @max_len bytes,
- * at which point an elipsis is added and we bail out. UTF-8 aware.
+ * Writes @source to @buffer, but stopping if @buffer reaches @max_len bytes,
+ * at which point an ellipsis is added and we bail out. UTF-8 aware.
  *
  * Returns: %TRUE if @max_len was reached, otherwise %FALSE
  */
