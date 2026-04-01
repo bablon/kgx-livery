@@ -1,28 +1,59 @@
-Version 49.2
+Version 50.0
 ~~~~~~~~~~~~
 
-Small fix for an an unfortunate crash, thanks to metamuffin, Johannes
-Altmanninger, and XiJet, for their assistance in catching this.
+Updated Translations
+ * Thai  (Aefgh Threenine)
 
-Updated Translations:
- * German  (Christian Kirbach)
- * Norwegian Bokmål  (Kjartan Maraas)
- * Serbian  (Мирослав Николић)
- * Serbian (Latin)  (Милош Поповић)
+Version 50.rc
+~~~~~~~~~~~~~
 
-Version 49.1
-~~~~~~~~~~~~
-
-A couple fixes, thanks again to all who provided feedback.
+Our various translator communities have been very busy this cycle, much
+thanks to all of them, as well as to Automeris naranja, Hari Rana, luzpaz,
+Maximiliano, metamuffin, nina, and Patrick Griffis, for the patches they
+provided.
 
 New Translations
+ * Cornish  (Flynn Peck)
  * Uighur  (Abduqadir Abliz)
 
 Updated Translations
+ * Basque  (Asier Saratsua Garmendia)
+ * Brazilian Portuguese  (Juliano de Souza Camargo)
+ * British English  (Bruce Cowan)
  * Bulgarian  (twlvnn kraftwerk)
- * Greek  (Dimitris Spentzos)
+ * Catalan  (Victor Dargallo)
+ * Chinese (China)  (luming zh)
+ * Chinese (Taiwan)  (Chao-Hsiung Liao, Yi-Jyun Pan)
+ * Czech  (Daniel Rusek)
+ * Danish  (Ask Hjorth Larsen)
+ * Dutch  (Nathan Follens)
+ * Finnish  (Jiri Grönroos)
+ * French  (Julien Humbert, Lucien Ouoba)
+ * Galician  (Fran Diéguez)
+ * Georgian  (Ekaterine Papava)
+ * German  (Froschi, Lenny Angst)
+ * Greek  (Dimitris Spentzos, Efstathios Iosifidis)
+ * Hebrew  (Yaron Shahrabani)
+ * Hungarian  (Balázs Úr)
+ * Indonesian  (Andika Triwidada)
+ * Japanese  (小山田 純 - Oyamada Jun)
+ * Kazakh  (Baurzhan Muftakhidinov)
+ * Korean  (DaeHyun Sung)
+ * Lithuanian  (Aurimas Aurimas Černius)
+ * Nepali  (Pawan Chitrakar)
  * Occitan  (Quentin PAGÈS)
+ * Persian  (Danial Behzadi)
+ * Polish  (Victoria)
  * Portuguese  (Hugo Carvalho)
+ * Romanian  (Antonio Marin)
+ * Russian  (Artur S0)
+ * Serbian  (Мирослав Николић)
+ * Serbian (Latin)  (Милош Поповић)
+ * Slovenian  (Martin)
+ * Spanish  (Daniel Mustieles)
+ * Swedish  (Anders Jonsson)
+ * Turkish  (Emin Tufan Çetin, Sabri Ünal)
+ * Ukrainian  (Yuri Chornoivan)
 
 Version 49.0
 ~~~~~~~~~~~~

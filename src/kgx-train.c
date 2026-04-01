@@ -1,6 +1,6 @@
 /* kgx-train.c
  *
- * Copyright 2021-2024 Zander Brown
+ * Copyright 2021-2025 Zander Brown
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 
 #include "kgx-enums.h"
 #include "kgx-marshals.h"
+#include "kgx-playbox.h"
+#include "kgx-remote.h"
 #include "kgx-utils.h"
 
 #include "kgx-train.h"
@@ -36,6 +38,7 @@ struct _KgxTrainPrivate {
 
   GHashTable *root;
   GHashTable *remote;
+  GHashTable *playbox;
   GHashTable *children;
 };
 
@@ -77,6 +80,7 @@ kgx_train_dispose (GObject *object)
 
   g_clear_pointer (&priv->root, g_hash_table_unref);
   g_clear_pointer (&priv->remote, g_hash_table_unref);
+  g_clear_pointer (&priv->playbox, g_hash_table_unref);
   g_clear_pointer (&priv->children, g_hash_table_unref);
 
   G_OBJECT_CLASS (kgx_train_parent_class)->dispose (object);
@@ -104,9 +108,7 @@ kgx_train_get_property (GObject    *object,
     case PROP_STATUS:
       g_value_set_flags (value, priv->status);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
+    KGX_INVALID_PROP (object, property_id, pspec);
   }
 }
 
@@ -128,9 +130,7 @@ kgx_train_set_property (GObject      *object,
     case PROP_PID:
       priv->pid = g_value_get_int (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
+    KGX_INVALID_PROP (object, property_id, pspec);
   }
 }
 
@@ -295,6 +295,7 @@ kgx_train_init (KgxTrain *self)
 
   priv->root = g_hash_table_new (g_direct_hash, g_direct_equal);
   priv->remote = g_hash_table_new (g_direct_hash, g_direct_equal);
+  priv->playbox = g_hash_table_new (g_direct_hash, g_direct_equal);
   priv->children = g_hash_table_new_full (g_direct_hash,
                                           g_direct_equal,
                                           NULL,
@@ -390,6 +391,13 @@ set_status (KgxTrain  *self,
 }
 
 
+static inline gpointer
+pid_as_key (pid_t pid)
+{
+  return GINT_TO_POINTER (pid);
+}
+
+
 static inline KgxStatus
 push_type (GHashTable *table,
            GPid        pid,
@@ -397,7 +405,7 @@ push_type (GHashTable *table,
            KgxStatus   status)
 {
   g_hash_table_insert (table,
-                       GINT_TO_POINTER (pid),
+                       pid_as_key (pid),
                        process != NULL ? g_rc_box_acquire (process) : NULL);
 
   g_debug ("train: Now %i %X", g_hash_table_size (table), status);
@@ -425,22 +433,12 @@ kgx_train_push_child (KgxTrain   *self,
   if (G_LIKELY (argv[0] != NULL)) {
     g_autofree char *program = g_path_get_basename (argv[0]);
 
-    if (G_UNLIKELY (g_strcmp0 (program, "ssh") == 0 ||
-                    g_strcmp0 (program, "telnet") == 0 ||
-                    g_strcmp0 (program, "mosh-client") == 0 ||
-                    g_strcmp0 (program, "mosh") == 0 ||
-                    g_strcmp0 (program, "et") == 0)) {
+    if (G_UNLIKELY (kgx_is_remote (program, argv))) {
       new_status |= push_type (priv->remote, pid, NULL, KGX_REMOTE);
     }
 
-    if (G_UNLIKELY (g_strcmp0 (program, "waypipe") == 0)) {
-      for (int i = 1; argv[i]; i++) {
-        if (G_UNLIKELY (g_strcmp0 (argv[i], "ssh") == 0 ||
-                        g_strcmp0 (argv[i], "telnet") == 0)) {
-          new_status |= push_type (priv->remote, pid, NULL, KGX_REMOTE);
-          break;
-        }
-      }
+    if (G_UNLIKELY (kgx_is_playbox (program, argv))) {
+      new_status |= push_type (priv->playbox, pid, NULL, KGX_PLAYBOX);
     }
   }
 
@@ -448,9 +446,13 @@ kgx_train_push_child (KgxTrain   *self,
     new_status |= push_type (priv->root, pid, NULL, KGX_PRIVILEGED);
   }
 
-  push_type (priv->children, pid, process, KGX_NONE);
-
   set_status (self, new_status);
+
+  if (g_hash_table_contains (priv->children, pid_as_key (pid))) {
+    return;
+  }
+
+  push_type (priv->children, pid, process, KGX_NONE);
 
   g_signal_emit (self, signals[CHILD_ADDED], 0, process);
 }
@@ -493,7 +495,12 @@ kgx_train_pop_child (KgxTrain   *self,
 
   pid = kgx_process_get_pid (process);
 
+  if (!g_hash_table_contains (priv->children, pid_as_key (pid))) {
+    return;
+  }
+
   new_status |= pop_type (priv->remote, pid, KGX_REMOTE);
+  new_status |= pop_type (priv->playbox, pid, KGX_PLAYBOX);
   new_status |= pop_type (priv->root, pid, KGX_PRIVILEGED);
   pop_type (priv->children, pid, KGX_NONE);
 

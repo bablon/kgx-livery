@@ -7,13 +7,14 @@
 # Jürgen Benvenuti <gastornis@posteo.org>, 2022-2024.
 # Christian Kirbach <christian.kirbach@gmail.com>, 2022.
 # Gabriel Brand <gabr.brand@gmail.com>, 2024.
+# Lenny Angst <lenny@familie-angst.ch>, 2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: console main\n"
 "Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/console/-/issues/\n"
-"POT-Creation-Date: 2025-10-16 16:06+0000\n"
-"PO-Revision-Date: 2025-10-18 01:13+0200\n"
+"POT-Creation-Date: 2025-12-28 14:23+0000\n"
+"PO-Revision-Date: 2026-01-17 23:45+0100\n"
 "Last-Translator: Christian Kirbach <christian.kirbach@gmail.com>\n"
 "Language-Team: German <gnome-de@gnome.org>\n"
 "Language: de\n"
@@ -21,7 +22,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.6\n"
+"X-Generator: Poedit 3.8\n"
 
 # Der Terminal-Emulator von KDE Plasma heißt bereits "Konsole", deshalb bleiben wir hier beim englischen Original. - pk
 #: data/org.gnome.Console.desktop.in.in:2
@@ -263,20 +264,31 @@ msgctxt "livery-name"
 msgid "XTerm"
 msgstr "XTerm"
 
+#. Translators: columns by rows, describing terminal size
+#: src/kgx-pages.c:298
+#, c-format
+msgid "%i by %i"
+msgstr "%i mal %i"
+
+#: src/kgx-pages.c:299
+#, c-format
+msgid "%i columns %i rows"
+msgstr "%i Spalten %i Zeilen"
+
 #. Translators: %i is, from the users perspective, a random number.
 #. * this string will only be seen when the running program has
 #. * failed to set a title, and exists purely to avoid blank tabs
 #.
-#: src/kgx-pages.c:495
+#: src/kgx-pages.c:508
 #, c-format
 msgid "Tab %i"
 msgstr "Reiter %i"
 
-#: src/kgx-pages.ui:100
+#: src/kgx-pages.ui:101
 msgid "_Detach Tab"
 msgstr "Reiter abtr_ennen"
 
-#: src/kgx-pages.ui:106 src/kgx-spad.c:203 src/kgx-spad.c:372
+#: src/kgx-pages.ui:107 src/kgx-spad.c:203 src/kgx-spad.c:372
 msgid "_Close"
 msgstr "S_chließen"
 
@@ -319,7 +331,7 @@ msgid ""
 "Opening ‘<a href=\"%s\">%s</a>’ failed:\n"
 "%s"
 msgstr ""
-"Das Öffnen von »<a href=\"%s\">%s</a>« ist fehlgeschlagen:\n"
+"Öffnen von »<a href=\"%s\">%s</a>« fehlgeschlagen:\n"
 "%s"
 
 #: src/kgx-spad.c:339 src/kgx-spad.ui:4
@@ -336,7 +348,7 @@ msgstr "Fehlermeldung kopieren"
 
 #: src/kgx-spad.ui:104
 msgid "Report _Issue"
-msgstr "Ein _Problem melden"
+msgstr "_Fehler melden"
 
 #: src/kgx-tab.c:597
 msgctxt "toast-button"
@@ -370,12 +382,13 @@ msgstr "Vorheriger Treffer"
 msgid "Next Match"
 msgstr "Nächster Treffer"
 
+# Link in Klammern zum besseren Verständnis.
 #. Translators: The user ctrl-clicked, or used ‘Open Link’, on a URI that,
 #. *              for whatever reason, we were unable to open.
 #: src/kgx-terminal.c:39
 msgctxt "toast-message"
 msgid "Couldn't Open Link"
-msgstr "Verweis konnte nicht geöffnet werden"
+msgstr "Konnte Verweis (Link) nicht öffnen"
 
 #: src/kgx-terminal.c:360
 #, c-format
@@ -384,8 +397,8 @@ msgid ""
 "The link “<a href=\"%s\">%s</a>” uses the protocol “%s”, for which no apps "
 "are installed."
 msgstr ""
-"Der Verweis »<a href=\"%s\">%s</a>« verwendet das Protokoll »%s«, für "
-"welches keine Anwendung installiert ist."
+"Der Verweis »<a href=\"%s\">%s</a>« nutzt das Protokoll »%s«, wofür keine "
+"Anwendungen installiert sind."
 
 #: src/kgx-terminal.c:373
 #, c-format
@@ -394,15 +407,15 @@ msgid ""
 "An unexpected error occurred whilst opening the link “<a href=\"%s\">%s</"
 "a>”. Please include the following information if you report the error."
 msgstr ""
-"Ein unbekannter Fehler trat beim Öffnen des Verweises »<a href=\"%s\">%s</"
-"a>« auf. Bitte geben Sie die folgenden Informationen mit, wenn Sie den "
+"Beim Öffnen des Verweises »<a href=\"%s\">%s</a>« ist ein unerwarteter "
+"Fehler aufgetreten. Bitte teilen Sie folgende Informationen, sollten Sie den "
 "Fehler melden."
 
 #: src/kgx-terminal.c:421
 #, c-format
 msgctxt "spad-message"
 msgid "The link “<a href=\"%s\">%s</a>” is malformed."
-msgstr "Der Verweis »<a href=\"%s\">%s</a>« ist inkorrekt."
+msgstr "Der Verweis »<a href=\"%s\">%s</a>« ist fehlerhaft."
 
 #: src/kgx-terminal.c:440
 #, c-format
@@ -413,10 +426,10 @@ msgid ""
 "\n"
 "This device is “%s” and the location is on “%s”."
 msgstr ""
-"Der Verweis »<a href=\"%s\">%s</a>« zeigt auf einen ORt auf einem anderen "
+"Der Verweis »<a href=\"%s\">%s</a>« zeigt auf einen Ort auf einem anderen "
 "Gerät.\n"
 "\n"
-"Das Gerät ist »%s« und der Ort ist auf »%s«."
+"Dieses Gerät ist »%s« und der Ort ist auf »%s«."
 
 #: src/kgx-terminal.c:511
 msgctxt "toast-message"
@@ -429,8 +442,8 @@ msgid ""
 "An unexpected error occurred whilst reading the clipboard. Please include "
 "the following information if you report the error."
 msgstr ""
-"Ein unbekannter Fehler trat beim Auslesen der Zwischenablage auf. Bitte "
-"geben Sie die folgenden Informationen mit, wenn Sie den Fehler melden."
+"Beim Lesen der Zwischenablage ist ein unerwarteter Fehler aufgetreten. Bitte "
+"teilen Sie folgende Informationen, sollten Sie den Fehler melden."
 
 #: src/kgx-terminal.c:575
 msgctxt "toast-message"
@@ -443,8 +456,8 @@ msgid ""
 "An unexpected error occurred whilst showing the file. Please include the "
 "following information if you report the error."
 msgstr ""
-"Ein unbekannter Fehler trat beim Zeigen der Datei auf. Bitte geben Sie die "
-"folgenden Informationen mit, wenn Sie den Fehler melden."
+"Beim Anzeigen der Datei ist ein unerwarteter Fehler aufgetreten. Bitte "
+"teilen Sie folgende Informationen, sollten Sie den Fehler melden."
 
 #: src/kgx-terminal.c:599
 msgctxt "toast-message"
@@ -457,8 +470,8 @@ msgid ""
 "An unexpected error occurred whilst opening the folder. Please include the "
 "following information if you report the error."
 msgstr ""
-"Ein unbekannter Fehler trat beim Öffnen des Ordners auf. Bitte geben Sie die "
-"folgenden Informationen mit, wenn Sie den Fehler melden."
+"Beim Öffnen des Ordners ist ein unerwarteter Fehler aufgetreten. Bitte "
+"teilen Sie folgende Informationen, sollten Sie den Fehler melden."
 
 #: src/kgx-terminal.c:696
 #, c-format
@@ -472,7 +485,7 @@ msgstr ""
 #: src/kgx-terminal.c:984
 msgctxt "toast-message"
 msgid "Couldn't Paste"
-msgstr "Einfügen war nicht möglich"
+msgstr "Einfügen fehlgeschlagen"
 
 #: src/kgx-terminal.c:987
 msgctxt "spad-message"
@@ -480,16 +493,18 @@ msgid ""
 "An unexpected error occurred whilst processing the clipboard. Please include "
 "the following information if you report the error."
 msgstr ""
-"Ein unbekannter Fehler trat bei der Verarbeitung der Zwischenablage auf. "
-"Bitte geben Sie die folgenden Informationen mit, wenn Sie den Fehler melden."
+"Beim Verarbeiten der Zwischenablage ist ein unerwarteter Fehler aufgetreten. "
+"Bitte teilen Sie folgende Informationen, sollten Sie den Fehler melden."
 
+# Link in Klammern zum besseren Verständnis.
 #: src/kgx-terminal.ui:7
 msgid "_Open Link"
-msgstr "Verweis ö_ffnen"
+msgstr "Verweis (Link) ö_ffnen"
 
+# Link in Klammern zum besseren Verständnis.
 #: src/kgx-terminal.ui:12
 msgid "Copy _Link Address"
-msgstr "Verknüpfungsadresse _kopieren"
+msgstr "_Verweisadresse (Linkadresse) kopieren"
 
 #: src/kgx-terminal.ui:19
 msgid "_Copy"
@@ -501,7 +516,7 @@ msgstr "_Alle auswählen"
 
 #: src/kgx-terminal.ui:36 src/kgx-window.ui:285
 msgid "Leave _Fullscreen"
-msgstr "Vollbild _verlassen"
+msgstr "V_ollbild verlassen"
 
 #: src/kgx-terminal.ui:43
 msgid "Show in _Files"
@@ -623,7 +638,7 @@ msgid "Custom _Font"
 msgstr "Benutzerdefinierte Schri_ftart"
 
 #: src/preferences/kgx-preferences-window.ui:61
-msgid "Behaviour"
+msgid "Behavior"
 msgstr "Verhalten"
 
 #: src/preferences/kgx-preferences-window.ui:64
@@ -638,11 +653,15 @@ msgstr "_Zeilenpuffer-Zeilen"
 msgid "Terminal Bell"
 msgstr "Terminal-Glocke"
 
-#: src/preferences/kgx-preferences-window.ui:93
+#: src/preferences/kgx-preferences-window.ui:91
+msgid "Control how alerts are indicated"
+msgstr "Steuern, wie Warnmeldungen angegeben werden"
+
+#: src/preferences/kgx-preferences-window.ui:94
 msgid "Play _Sound"
 msgstr "Klang ab_spielen"
 
-#: src/preferences/kgx-preferences-window.ui:99
+#: src/preferences/kgx-preferences-window.ui:100
 msgid "_Visual Effects"
 msgstr "_Visuelle Effekte"
 
@@ -725,3 +744,13 @@ msgstr "Zum Reiter 1–9 wechseln"
 msgctxt "shortcut window"
 msgid "Switch to Tab 10"
 msgstr "Zum Reiter 10 wechseln"
+
+#: src/shortcuts-dialog.ui:116
+msgctxt "shortcut window"
+msgid "Window"
+msgstr "Fenster"
+
+#: src/shortcuts-dialog.ui:119
+msgctxt "shortcut window"
+msgid "Fullscreen"
+msgstr "Vollbild"
