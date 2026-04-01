@@ -1,3 +1,9 @@
+gnome-console (50.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 01 Apr 2026 14:42:34 -0400
+
 gnome-console (49.2-1) unstable; urgency=medium
 
   * New upstream release
