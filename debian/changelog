@@ -1,3 +1,9 @@
+gnome-console (50.0-2) unstable; urgency=medium
+
+  * Add Depends: locales-all for build tests as required by gtk4 4.22.2
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 03 Apr 2026 08:26:18 -0400
+
 gnome-console (50.0-1) unstable; urgency=medium
 
   * New upstream release
