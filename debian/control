@@ -17,6 +17,7 @@ Build-Depends:
  libpcre2-dev,
  libvte-2.91-gtk4-dev (>= 0.77.0),
  libxml2-utils,
+ locales-all <!nocheck>,
  meson,
  xauth <!nocheck>,
  xvfb <!nocheck>,
