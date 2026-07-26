@@ -6,7 +6,7 @@ Uploaders:
  Arnaud Ferraris <aferraris@debian.org>,
 Section: gnome
 Build-Depends:
- debhelper-compat (= 13),
+ debhelper-compat (= 14),
  appstream <!nocheck>,
  desktop-file-utils,
  gsettings-desktop-schemas-dev,
@@ -29,8 +29,6 @@ Package: gnome-console
 Architecture: any
 Depends:
  gsettings-desktop-schemas,
- ${misc:Depends},
- ${shlibs:Depends},
 Provides:
  x-terminal-emulator,
 Description: Simple user-friendly terminal emulator for the GNOME desktop
