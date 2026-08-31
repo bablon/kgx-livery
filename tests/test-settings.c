@@ -350,12 +350,14 @@ test_settings_size (Fixture *fixture, gconstpointer unused)
   int width = 42;
   int height = 42;
   gboolean maximised = TRUE;
+  gboolean fullscreen = TRUE;
 
-  kgx_settings_get_size (settings, &width, &height, &maximised);
+  kgx_settings_get_size (settings, &width, &height, &maximised, &fullscreen);
 
   g_assert_cmpint (width, ==, -1);
   g_assert_cmpint (height, ==, -1);
   g_assert_false (maximised);
+  g_assert_false (fullscreen);
 }
 
 
@@ -366,13 +368,61 @@ test_settings_custom_size (Fixture *fixture, gconstpointer unused)
   int width = 42;
   int height = 42;
   gboolean maximised = FALSE;
+  gboolean fullscreen = FALSE;
 
-  kgx_settings_set_custom_size (settings, 200, 100, TRUE);
-  kgx_settings_get_size (settings, &width, &height, &maximised);
+  kgx_settings_set_custom_size (settings, 200, 100, TRUE, TRUE);
+  kgx_settings_get_size (settings, &width, &height, &maximised, &fullscreen);
 
   g_assert_cmpint (width, ==, 200);
   g_assert_cmpint (height, ==, 100);
   g_assert_true (maximised);
+  g_assert_true (fullscreen);
+
+  /* Disable window-state persistence */
+  g_settings_set_boolean (fixture->settings, "restore-window-size", FALSE);
+
+  /* Associated keys get reset */
+  g_assert_null (g_settings_get_user_value (fixture->settings,
+                                            "last-window-size"));
+  g_assert_null (g_settings_get_user_value (fixture->settings,
+                                            "last-window-maximised"));
+  g_assert_null (g_settings_get_user_value (fixture->settings,
+                                            "last-window-fullscreen"));
+
+  /* This should now be a no-op */
+  kgx_settings_set_custom_size (settings, 900, 300, FALSE, FALSE);
+
+  /* Thus no values stored */
+  g_assert_null (g_settings_get_user_value (fixture->settings,
+                                            "last-window-size"));
+  g_assert_null (g_settings_get_user_value (fixture->settings,
+                                            "last-window-maximised"));
+  g_assert_null (g_settings_get_user_value (fixture->settings,
+                                            "last-window-fullscreen"));
+
+  /* Even with manually written values */
+  g_settings_set (fixture->settings, "last-window-size", "(ii)", 42, 42);
+  g_settings_set_boolean (fixture->settings, "last-window-maximised", TRUE);
+  g_settings_set_boolean (fixture->settings, "last-window-fullscreen", TRUE);
+
+  /* We see default values */
+  kgx_settings_get_size (settings, &width, &height, &maximised, &fullscreen);
+
+  g_assert_cmpint (width, ==, -1);
+  g_assert_cmpint (height, ==, -1);
+  g_assert_false (maximised);
+  g_assert_false (fullscreen);
+
+  /* Enable persistence again */
+  g_settings_set_boolean (fixture->settings, "restore-window-size", TRUE);
+
+  /* We see those manually written values */
+  kgx_settings_get_size (settings, &width, &height, &maximised, &fullscreen);
+
+  g_assert_cmpint (width, ==, 42);
+  g_assert_cmpint (height, ==, 42);
+  g_assert_true (maximised);
+  g_assert_true (fullscreen);
 }
 
 
@@ -674,6 +724,35 @@ test_settings_transparency (Fixture *fixture, gconstpointer unused)
 }
 
 
+static void
+test_settings_always_stop_train (Fixture *fixture, gconstpointer unused)
+{
+  g_autoptr (KgxSettings) settings = g_object_new (KGX_TYPE_SETTINGS, NULL);
+  gboolean result = TRUE;
+
+  g_settings_set_boolean (fixture->settings, "always-stop-train", TRUE);
+
+  g_object_get (settings, "always-stop-train", &result, NULL);
+  g_assert_true (result);
+
+  kgx_test_property_notify (settings, "always-stop-train", FALSE, TRUE);
+
+  g_object_get (settings, "always-stop-train", &result, NULL);
+  g_assert_true (result);
+
+  kgx_expect_no_notify (settings);
+  g_settings_set_boolean (fixture->settings, "always-stop-train", TRUE);
+  kgx_assert_expected_notifies (settings);
+
+  kgx_expect_property_notify (settings, "always-stop-train");
+  g_settings_set_boolean (fixture->settings, "always-stop-train", FALSE);
+  kgx_assert_expected_notifies (settings);
+
+  g_object_get (settings, "always-stop-train", &result, NULL);
+  g_assert_false (result);
+}
+
+
 #define fixtured_test(path, data, func) \
   g_test_add ((path), Fixture, (data), fixture_setup, (func), fixture_tear);
 
@@ -724,6 +803,9 @@ main (int argc, char *argv[])
 
   fixtured_test ("/kgx/settings/software-flow-control", NULL, test_settings_software_flow_control);
   fixtured_test ("/kgx/settings/transparency", NULL, test_settings_transparency);
+  fixtured_test ("/kgx/settings/always-stop-train",
+                 NULL,
+                 test_settings_always_stop_train);
 
   return g_test_run ();
 }

@@ -37,6 +37,9 @@
     <key name="last-window-maximised" type="b">
       <default>false</default>
     </key>
+    <key name="last-window-fullscreen" type="b">
+      <default>false</default>
+    </key>
     <key name="restore-window-size" type="b">
       <default>true</default>
     </key>
@@ -57,6 +60,10 @@
     </key>
     <key name="custom-liveries" type="a{sv}">
       <default>{}</default>
+    </key>
+    <key name="always-stop-train" type="b">
+      <default>false</default>
+      <summary>Bypass the ‘Close Tab?’ or ‘Close Window?’ dialogues</summary>
     </key>
   </schema>
 </schemalist>
