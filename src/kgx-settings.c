@@ -1,6 +1,6 @@
 /* kgx-settings.c
  *
- * Copyright 2022-2023 Zander Brown
+ * Copyright 2022-2026 Zander Brown
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #define RESTORE_SIZE_KEY "restore-window-size"
 #define LAST_SIZE_KEY "last-window-size"
 #define LAST_MAXIMISED_KEY "last-window-maximised"
+#define LAST_FULLSCREEN_KEY "last-window-fullscreen"
 
 #define AUDIBLE_BELL "audible-bell"
 
@@ -54,6 +55,7 @@ struct _KgxSettings {
   gboolean              software_flow_control;
   KgxLivery            *livery;
   gboolean              transparency;
+  gboolean              always_stop_train;
 
   KgxLiveryManager     *livery_manager;
 
@@ -83,7 +85,8 @@ enum {
   PROP_SOFTWARE_FLOW_CONTROL,
   PROP_LIVERY,
   PROP_TRANSPARENCY,
-  LAST_PROP
+  PROP_ALWAYS_STOP_TRAIN,
+  LAST_PROP,
 };
 static GParamSpec *pspecs[LAST_PROP] = { NULL, };
 
@@ -132,8 +135,7 @@ kgx_settings_set_property (GObject      *object,
 
   switch (property_id) {
     case PROP_THEME:
-      self->theme = g_value_get_enum (value);
-      g_object_notify_by_pspec (object, pspec);
+      kgx_set_enum_prop (object, pspec, (int *) &self->theme, value);
       break;
     case PROP_FONT:
       g_clear_pointer (&self->font, pango_font_description_free);
@@ -198,6 +200,12 @@ kgx_settings_set_property (GObject      *object,
     case PROP_LIVERY:
       kgx_settings_set_livery (self, g_value_get_boxed (value));
       break;
+    case PROP_ALWAYS_STOP_TRAIN:
+      kgx_set_boolean_prop (object,
+                            pspec,
+                            &self->always_stop_train,
+                            value);
+      break;
     KGX_INVALID_PROP (object, property_id, pspec);
   }
 }
@@ -256,6 +264,9 @@ kgx_settings_get_property (GObject    *object,
       break;
     case PROP_TRANSPARENCY:
       g_value_set_boolean (value, self->transparency);
+      break;
+    case PROP_ALWAYS_STOP_TRAIN:
+      g_value_set_boolean (value, self->always_stop_train);
       break;
     KGX_INVALID_PROP (object, property_id, pspec);
   }
@@ -385,6 +396,11 @@ kgx_settings_class_init (KgxSettingsClass *klass)
                           FALSE,
                           G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
 
+  pspecs[PROP_ALWAYS_STOP_TRAIN] =
+    g_param_spec_boolean ("always-stop-train", NULL, NULL,
+                          FALSE,
+                          G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (object_class, LAST_PROP, pspecs);
 
   g_type_ensure (KGX_TYPE_SYSTEM_INFO);
@@ -472,7 +488,9 @@ restore_window_size_changed (GSettings   *settings,
                              KgxSettings *self)
 {
   if (!g_settings_get_boolean (self->settings, RESTORE_SIZE_KEY)) {
-    g_settings_set (self->settings, LAST_SIZE_KEY, "(ii)", -1, -1);
+    g_settings_reset (self->settings, LAST_SIZE_KEY);
+    g_settings_reset (self->settings, LAST_MAXIMISED_KEY);
+    g_settings_reset (self->settings, LAST_FULLSCREEN_KEY);
   }
 }
 
@@ -572,6 +590,9 @@ kgx_settings_init (KgxSettings *self)
                                 resolve_livery,
                                 select_livery,
                                 self, NULL);
+  g_settings_bind (self->settings, "always-stop-train",
+                   self, "always-stop-train",
+                   G_SETTINGS_BIND_DEFAULT);
 
   g_signal_connect (self->settings,
                     "changed::" RESTORE_SIZE_KEY,
@@ -684,7 +705,8 @@ void
 kgx_settings_get_size (KgxSettings *self,
                        int         *width,
                        int         *height,
-                       gboolean    *maximised)
+                       gboolean    *maximised,
+                       gboolean    *fullscreen)
 {
   g_return_if_fail (KGX_IS_SETTINGS (self));
   g_return_if_fail (width != NULL && height != NULL && maximised != NULL);
@@ -693,11 +715,13 @@ kgx_settings_get_size (KgxSettings *self,
     *width = -1;
     *height = -1;
     *maximised = FALSE;
+    *fullscreen = FALSE;
     return;
   }
 
   g_settings_get (self->settings, LAST_SIZE_KEY, "(ii)", width, height);
   g_settings_get (self->settings, LAST_MAXIMISED_KEY, "b", maximised);
+  g_settings_get (self->settings, LAST_FULLSCREEN_KEY, "b", fullscreen);
 }
 
 
@@ -705,7 +729,8 @@ void
 kgx_settings_set_custom_size (KgxSettings *self,
                               int          width,
                               int          height,
-                              gboolean     maximised)
+                              gboolean     maximised,
+                              gboolean     fullscreen)
 {
   g_return_if_fail (KGX_IS_SETTINGS (self));
 
@@ -717,6 +742,7 @@ kgx_settings_set_custom_size (KgxSettings *self,
 
   g_settings_set (self->settings, LAST_SIZE_KEY, "(ii)", width, height);
   g_settings_set (self->settings, LAST_MAXIMISED_KEY, "b", maximised);
+  g_settings_set (self->settings, LAST_FULLSCREEN_KEY, "b", fullscreen);
 }
 
 
@@ -827,4 +853,17 @@ kgx_settings_resolve_theme (KgxSettings *self, gboolean dark_environment)
   }
 
   return KGX_THEME_DAY;
+}
+
+
+/**
+ * kgx_settings_always_stop_train: (get-property always-stop-train)
+ * @self: the [type@Kgx.Settings].
+ */
+gboolean
+kgx_settings_always_stop_train (KgxSettings *self)
+{
+  g_return_val_if_fail (KGX_IS_SETTINGS (self), FALSE);
+
+  return self->always_stop_train;
 }

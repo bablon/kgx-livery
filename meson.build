@@ -1,7 +1,7 @@
 project(
   'gnome-console',
   'c',
-  version: '50.0',
+  version: '51.rc',
   meson_version: '>= 1.5.0',
   license: 'GPL-3.0-or-later',
   license_files: ['COPYING'],
@@ -46,7 +46,7 @@ endif
 
 kgx_homepage_url = 'https://apps.gnome.org/Console/'
 kgx_issue_url = 'https://gitlab.gnome.org/GNOME/console/-/issues/'
-copyright_range = '2019-2025'
+copyright_range = '2019-2026'
 vcs_tag_fallback = 'no-tag'
 
 prefix = get_option('prefix')
@@ -84,7 +84,7 @@ if get_option('tests')
 endif
 
 # Gtk Requirement
-gtk_min_ver = '4.19'
+gtk_min_ver = '4.22'
 gtk_min_ver_parts = gtk_min_ver.split('.')
 if gtk_min_ver_parts[1].to_int().is_odd()
   gtk_sym_ver = 'GDK_VERSION_@0@_@1@'.format(
@@ -92,18 +92,18 @@ if gtk_min_ver_parts[1].to_int().is_odd()
     gtk_min_ver_parts[1].to_int() + 1,
   )
 else
-  gtk_sym_ver = 'GDK_VERSION_@0@@_@_@1@'.format(
+  gtk_sym_ver = 'GDK_VERSION_@0@_@1@'.format(
     gtk_min_ver_parts[0],
     gtk_min_ver_parts[1],
   )
 endif
 
 # GLib Requirement
-glib_min_ver = '2.80'
+glib_min_ver = '2.88'
 glib_sym_ver = 'GLIB_VERSION_@0@'.format(glib_min_ver.replace('.', '_'))
 
 # Adwaita Requirement
-adw_min_ver = '1.8'
+adw_min_ver = '1.9'
 adw_sym_ver = 'ADW_VERSION_@0@'.format(adw_min_ver.replace('.', '_'))
 
 kgx_cargs = [
