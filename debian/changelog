@@ -1,8 +1,13 @@
-gnome-console (51~rc-1) UNRELEASED; urgency=medium
+gnome-console (51~rc-1) unstable; urgency=medium
 
+  [ Jeremy Bícha ]
   * New upstream release
+  * Update minimum glib, gtk4, and libadwaita
 
- -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 31 Aug 2026 06:40:04 +0200
+  [ Dawid Kulas ]
+  * Update debian/watch to Version: 5
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Mon, 31 Aug 2026 06:42:29 +0200
 
 gnome-console (50.0-3) unstable; urgency=medium
 
