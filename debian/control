@@ -8,6 +8,7 @@ Section: gnome
 Build-Depends:
  debhelper-compat (= 14),
  appstream <!nocheck>,
+ dbus-daemon <!nocheck>,
  desktop-file-utils,
  gsettings-desktop-schemas-dev,
  libadwaita-1-dev (>= 1.9~alpha),
