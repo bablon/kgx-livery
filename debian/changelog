@@ -1,3 +1,9 @@
+gnome-console (51.0-2) unstable; urgency=medium
+
+  * Increase build test timeout multiplier for riscv64 again
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Thu, 01 Oct 2026 07:02:40 +0200
+
 gnome-console (51.0-1) unstable; urgency=medium
 
   * New upstream release
