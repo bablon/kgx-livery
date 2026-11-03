@@ -21,16 +21,18 @@ use std::cell::RefCell;
 use std::process::Command;
 
 use gtk::glib::{self, Variant, VariantDict, VariantTy};
-use gtk::{Orientation, Align};
 use gtk::gdk::{RGBA, Display};
 
-use adw::prelude::*;
-use adw::{Application, ApplicationWindow};
-use adw::{ToolbarView, HeaderBar, Clamp};
-use adw::{PreferencesGroup, StyleManager, ColorScheme};
-use gtk::{TextView, TextBuffer, ScrolledWindow, PolicyType, WrapMode};
-use gtk::{Grid, ColorDialogButton, ColorDialog, Button, ToggleButton};
-use gtk::{FileDialog, CssProvider};
+use adw::{
+    prelude::*, Application, ApplicationWindow, ToolbarView, HeaderBar, Clamp,
+    PreferencesGroup, StyleManager, ColorScheme,
+};
+
+use gtk::{
+    Orientation, Align, TextView, TextBuffer, ScrolledWindow, PolicyType, WrapMode,
+    TextTag, TextMark, Grid, ColorDialogButton, ColorDialog, Button, ToggleButton,
+    FileDialog, CssProvider,
+};
 
 const STYLE_NIGHT: KgxLivery = KgxLivery {
     color: [
@@ -104,6 +106,10 @@ struct Livery {
     sync_button: bool,
 
     css_provider: Vec<CssProvider>,
+
+    text_tag: Vec<TextTag>,
+    text_mark: Vec<(TextMark, TextMark)>,
+    text_buffer: Option<TextBuffer>,
 }
 
 fn main() -> glib::ExitCode {
@@ -114,6 +120,9 @@ fn main() -> glib::ExitCode {
         palette_button: Vec::with_capacity(16),
         sync_button: false,
         css_provider: Vec::with_capacity(4),
+        text_tag: Vec::with_capacity(16),
+        text_mark: Vec::with_capacity(16),
+        text_buffer: None,
     }));
 
     let application = Application::builder()
@@ -151,10 +160,12 @@ fn main() -> glib::ExitCode {
             .margin_end(6)
             .build();
         let text_buffer = TextBuffer::builder()
-            .text("It was the best of times, it was the worst of times.")
+            .text("It was the best of times, it was the worst of times.\n\n")
             .build();
         let text_view = TextView::builder()
             .buffer(&text_buffer)
+            .editable(false)
+            .cursor_visible(false)
             .wrap_mode(WrapMode::Char)
             .monospace(true).vexpand(true).build();
         text_view.add_css_class("preview_fg");
@@ -244,21 +255,78 @@ fn main() -> glib::ExitCode {
 
         palette.add(&palette_grid);
 
+        let text_sample: [&str; 16] = [
+            "Black 0",    "8  Bright Black",
+            "Red 1",      "9  Bright Red",
+            "Green 2",    "10 Bright Green",
+            "Yellow 3",   "11 Bright Yellow",
+            "Blue 4",     "12 Bright Blue",
+            "Magenta 5",  "13 Bright Magenta",
+            "Cyan 6",     "14 Bright Cyan",
+            "White 7",    "15 Bright White",
+        ];
+
+        let mut tags: Vec<TextTag> = Vec::with_capacity(16);
+        let mut marks: Vec<(TextMark, TextMark)> = Vec::with_capacity(16);
+
         for i in 0..16 {
             let color_button = ColorDialogButton::builder()
                 .rgba(&livery.borrow().selector[idx].palette[i])
                 .dialog(&ColorDialog::new()).build();
 
-            color_button.connect_rgba_notify(glib::clone!(#[weak] livery, move |button| {
+            color_button.connect_rgba_notify(glib::clone!(#[weak] livery, #[weak] text_buffer, move |button| {
                 if !livery.borrow().sync_button {
                     let idx = livery.borrow().is_light as usize;
                     livery.borrow_mut().selector[idx].palette[i] = button.rgba();
+
+                    let start = text_buffer.iter_at_mark(&livery.borrow().text_mark[i].0);
+                    let end = text_buffer.iter_at_mark(&livery.borrow().text_mark[i].1);
+
+                    text_buffer.remove_tag(&livery.borrow().text_tag[i], &start, &end);
+                    livery.borrow().text_tag[i].set_foreground_rgba(Some(&button.rgba()));
+                    text_buffer.apply_tag(&livery.borrow().text_tag[i], &start, &end);
                 }
             }));
 
             palette_grid.attach(&color_button, (i % 8) as i32, (i / 8) as i32, 1, 1);
             livery.borrow_mut().palette_button.push(color_button);
+
+            let color_idx = if i % 2 == 0 { i / 2} else { i / 2 + 8 };
+            let text_tag = TextTag::builder()
+                .foreground_rgba(&livery.borrow().selector[idx].palette[color_idx])
+                .build();
+            text_buffer.tag_table().add(&text_tag);
+
+            let mut iter_pos = text_buffer.end_iter();
+            let start_mark = text_buffer.create_mark(None, &iter_pos, true);
+
+            if i % 2 == 0 {
+                text_buffer.insert(&mut iter_pos, &format!("{:>16}  ", text_sample[i]));
+            } else {
+                text_buffer.insert(&mut iter_pos, &format!("{}\n", text_sample[i]));
+            }
+
+            let end_mark = text_buffer.create_mark(None, &iter_pos, true);
+
+            text_buffer.apply_tag(&text_tag,
+                &text_buffer.iter_at_mark(&start_mark),
+                &text_buffer.iter_at_mark(&end_mark));
+
+            tags.push(text_tag);
+            marks.push((start_mark, end_mark));
         }
+
+        for i in (0..16).step_by(2) {
+            livery.borrow_mut().text_tag.push(tags[i].clone());
+            livery.borrow_mut().text_mark.push((marks[i].0.clone(), marks[i].1.clone()));
+        }
+
+        for i in (1..16).step_by(2) {
+            livery.borrow_mut().text_tag.push(tags[i].clone());
+            livery.borrow_mut().text_mark.push((marks[i].0.clone(), marks[i].1.clone()));
+        }
+
+        livery.borrow_mut().text_buffer = Some(text_buffer);
 
         let apply_box = gtk::Box::builder()
             .orientation(Orientation::Horizontal)
@@ -584,6 +652,15 @@ fn livery_sync(livery: &Rc<RefCell<Livery>>) {
 
         for i in 0..16 {
             console.palette_button[i].set_rgba(&kgx_livery.palette[i]);
+
+            if let Some(ref buffer) = console.text_buffer {
+                let start = buffer.iter_at_mark(&console.text_mark[i].0);
+                let end = buffer.iter_at_mark(&console.text_mark[i].1);
+
+                buffer.remove_tag(&console.text_tag[i], &start, &end);
+                console.text_tag[i].set_foreground_rgba(Some(&kgx_livery.palette[i]));
+                buffer.apply_tag(&console.text_tag[i], &start, &end);
+            }
         }
     }
 
