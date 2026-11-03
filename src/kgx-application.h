@@ -39,5 +39,7 @@ KgxTab *              kgx_application_add_terminal    (KgxApplication *self,
                                                        GFile          *working_directory,
                                                        GStrv           command,
                                                        const char     *title);
+void                  kgx_application_load_css        (KgxApplication *self,
+                                                       const char     *string);
 
 G_END_DECLS

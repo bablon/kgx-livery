@@ -40,6 +40,9 @@
 struct _KgxPalette {
   GdkRGBA foreground;
   GdkRGBA background;
+  GdkRGBA headerbar_fg;
+  GdkRGBA headerbar_bg;
+  gboolean has_headerbar;
   size_t  n_colours;
   GdkRGBA colours[];
 };
@@ -103,6 +106,9 @@ kgx_palette_deserialise (GVariant *variant)
   g_autoptr (GVariantIter) colours_iter = NULL;
   GdkRGBA foreground, background;
   double r, g, b, transparency = 0.0;
+  GdkRGBA header_bar_fg, header_bar_bg;
+  int count = 0;
+  KgxPalette *self;
 
   if (G_LIKELY (g_variant_dict_lookup (&dict, "foreground", RGB_TYPE, &r, &g, &b))) {
     foreground = RGB_COLOUR (r, g, b);
@@ -118,6 +124,16 @@ kgx_palette_deserialise (GVariant *variant)
     g_warning ("palette: (%p) missing background", variant);
   }
 
+  if (g_variant_dict_lookup (&dict, "headerbar-fg", RGB_TYPE, &r, &g, &b)) {
+    header_bar_fg = RGB_COLOUR(r, g, b);
+    count++;
+  }
+
+  if (g_variant_dict_lookup (&dict, "headerbar-bg", RGB_TYPE, &r, &g, &b)) {
+    header_bar_bg = RGB_COLOUR(r, g, b);
+    count++;
+  }
+
   if (G_LIKELY (g_variant_dict_lookup (&dict, "colours", "a(ddd)", &colours_iter))) {
     while (g_variant_iter_loop (colours_iter, RGB_TYPE, &r, &g, &b)) {
       g_array_append_val (colours, RGB_COLOUR (r, g, b));
@@ -128,11 +144,18 @@ kgx_palette_deserialise (GVariant *variant)
 
   g_variant_dict_lookup (&dict, "transparency", "d", &transparency);
 
-  return kgx_palette_new (&foreground,
+  self = kgx_palette_new (&foreground,
                           &background,
                           PERCENT (transparency),
                           colours->len,
                           (GdkRGBA *) colours->data);
+  if (count == 2) {
+    self->has_headerbar = TRUE;
+    self->headerbar_fg = header_bar_fg;
+    self->headerbar_bg = header_bar_bg;
+  }
+
+  return self;
 }
 
 
@@ -427,4 +450,17 @@ kgx_palette_get_colours (KgxPalette    *self,
   *background = self->background;
   *n_colours = self->n_colours;
   *colours = self->colours;
+}
+
+void
+kgx_palette_get_headerbar_colours (KgxPalette    *self,
+                                   gboolean      *has_headerbar,
+                                   GdkRGBA       *const foreground,
+                                   GdkRGBA       *const background)
+{
+  g_return_if_fail (self != NULL);
+
+  *foreground = self->headerbar_fg;
+  *background = self->headerbar_bg;
+  *has_headerbar = self->has_headerbar;
 }

@@ -33,6 +33,7 @@
 #include "kgx-spad.h"
 
 #include "kgx-terminal.h"
+#include "kgx-application.h"
 
 /* Translators: The user ctrl-clicked, or used ‘Open Link’, on a URI that,
  *              for whatever reason, we were unable to open. */
@@ -136,6 +137,8 @@ static void
 kgx_terminal_set_palette (KgxTerminal *self, KgxPalette *palette)
 {
   GdkRGBA foreground, background;
+  GdkRGBA headerfg, headerbg;
+  gboolean has_headerbar = FALSE;
   const GdkRGBA *colours;
   size_t n_colours;
 
@@ -153,6 +156,39 @@ kgx_terminal_set_palette (KgxTerminal *self, KgxPalette *palette)
                            &background,
                            colours,
                            n_colours);
+
+  kgx_palette_get_headerbar_colours (palette,
+                                     &has_headerbar,
+                                     &headerfg,
+                                     &headerbg);
+  GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(self));
+  KgxApplication *app = KGX_APPLICATION(gtk_window_get_application(GTK_WINDOW(root)));
+  gchar *css = NULL;
+
+  if (!has_headerbar) {
+    css = g_strdup_printf(
+      ".terminal-window.custom {\n"
+      "}");
+  } else {
+    css = g_strdup_printf(
+      ".terminal-window.custom {\n"
+      "  --headerbar-fg-color: #%02x%02x%02x;\n"
+      "  --headerbar-bg-color: #%02x%02x%02x;\n"
+      "  --headerbar-backdrop-color: oklch(from #%02x%02x%02x calc(l * 0.9) calc(c * 0.85) h);\n"
+      "}",
+      (guint)(headerfg.red * 255.0),
+      (guint)(headerfg.green * 255.0),
+      (guint)(headerfg.blue * 255.0),
+      (guint)(headerbg.red * 255.0),
+      (guint)(headerbg.green * 255.0),
+      (guint)(headerbg.blue * 255.0),
+      (guint)(headerbg.red * 255.0),
+      (guint)(headerbg.green * 255.0),
+      (guint)(headerbg.blue * 255.0));
+  }
+
+  kgx_application_load_css(app, css);
+  g_free(css);
 
   g_object_notify_by_pspec (G_OBJECT (self), pspecs[PROP_PALETTE]);
 }

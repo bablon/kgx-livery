@@ -19,6 +19,10 @@
   }
 }
 
+windowhandle {
+  background-image: none;
+}
+
 kgx-tab .top-bar {
   background-image: none;
   background-color: var(--view-bg-color);

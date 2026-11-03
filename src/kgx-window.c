@@ -671,6 +671,8 @@ kgx_window_init (KgxWindow *self)
 
   #ifdef IS_DEVEL
   gtk_widget_add_css_class (GTK_WIDGET (self), "devel");
+  #else
+  gtk_widget_add_css_class (GTK_WIDGET (self), "custom");
   #endif
 
   /* Note this unfortunately doesn't allow us to workaround the portal

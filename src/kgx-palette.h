@@ -51,6 +51,10 @@ void           kgx_palette_get_colours       (KgxPalette            *self,
                                               GdkRGBA         *const background,
                                               size_t          *const n_colours,
                                               const GdkRGBA         *colours[const *n_colours]);
+void       kgx_palette_get_headerbar_colours (KgxPalette            *self,
+                                              gboolean              *has_headerbar,
+                                              GdkRGBA         *const foreground,
+                                              GdkRGBA         *const background);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (KgxPalette, kgx_palette_unref)
 

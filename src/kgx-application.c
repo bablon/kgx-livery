@@ -50,6 +50,7 @@ struct _KgxApplication {
   GHashTable               *active_windows;
 
   GStrv                     argv;
+  GtkCssProvider           *css_provider;
 };
 
 
@@ -77,6 +78,8 @@ kgx_application_dispose (GObject *object)
   g_clear_pointer (&self->active_windows, g_hash_table_unref);
 
   g_clear_pointer (&self->argv, g_strfreev);
+
+  g_clear_object (&self->css_provider);
 
   G_OBJECT_CLASS (kgx_application_parent_class)->dispose (object);
 }
@@ -162,6 +165,11 @@ kgx_application_startup (GApplication *app)
                                style_manager, "color-scheme",
                                G_BINDING_SYNC_CREATE,
                                theme_to_colour_scheme, NULL, NULL, NULL);
+
+  self->css_provider = gtk_css_provider_new ();
+  gtk_style_context_add_provider_for_display (gdk_display_get_default (),
+                GTK_STYLE_PROVIDER (self->css_provider),
+                GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
   gtk_application_set_accels_for_action (GTK_APPLICATION (app),
                                          "win.new-window",
@@ -896,4 +904,11 @@ kgx_application_add_terminal (KgxApplication *self,
   gtk_window_present (window);
 
   return KGX_TAB (tab);
+}
+
+void
+kgx_application_load_css (KgxApplication *self,
+                          const char     *string)
+{
+  gtk_css_provider_load_from_string(self->css_provider, string);
 }
