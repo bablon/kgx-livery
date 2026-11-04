@@ -141,6 +141,13 @@ fn main() -> glib::ExitCode {
             livery.borrow_mut().css_provider.push(provider);
         }
 
+        let css_provider = CssProvider::new();
+        gtk::style_context_add_provider_for_display(
+            &Display::default().unwrap(),
+            &css_provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+        css_provider.load_from_string("windowhandle { background-image: none; }");
+
         let style_manager = StyleManager::default();
 
         if style_manager.is_dark() {
