@@ -582,23 +582,19 @@ fn variant_to_kgx_livery(dict: &VariantDict, is_light: bool) -> Option<KgxLivery
     if let Ok(Some((r, g, b))) = dict.lookup::<(f64, f64, f64)>("foreground") {
         kgx_livery.color[0] = RGBA::new(r as f32, g as f32, b as f32, 1.0);
         count += 1;
-        println!("foreground ({}, {}, {})", r, g, b);
     }
 
     if let Ok(Some((r, g, b))) = dict.lookup::<(f64, f64, f64)>("background") {
         kgx_livery.color[1] = RGBA::new(r as f32, g as f32, b as f32, 1.0);
         count += 1;
-        println!("background ({}, {}, {})", r, g, b);
     }
 
     if let Ok(Some((r, g, b))) = dict.lookup::<(f64, f64, f64)>("headerbar-fg") {
         kgx_livery.color[2] = RGBA::new(r as f32, g as f32, b as f32, 1.0);
-        println!("headerbar-fg ({}, {}, {})", r, g, b);
     }
 
     if let Ok(Some((r, g, b))) = dict.lookup::<(f64, f64, f64)>("headerbar-bg") {
         kgx_livery.color[3] = RGBA::new(r as f32, g as f32, b as f32, 1.0);
-        println!("headerbar-bg ({}, {}, {})", r, g, b);
     }
 
     if let Ok(Some(palette)) = dict.lookup::<Vec<(f64, f64, f64)>>("colours") {
@@ -606,7 +602,6 @@ fn variant_to_kgx_livery(dict: &VariantDict, is_light: bool) -> Option<KgxLivery
             for i in 0..16 {
                 kgx_livery.palette[i] =
                     RGBA::new(palette[i].0 as f32, palette[i].1 as f32, palette[i].2 as f32, 1.0);
-                println!("palette {} ({}, {}, {})", i, palette[i].0, palette[i].1, palette[i].2);
             }
 
             count += 16;
@@ -626,14 +621,12 @@ fn variant_to_livery(livery: &mut Livery, custom: &Variant) {
                 if let Ok(Some(value)) = dict.lookup::<VariantDict>("night") {
                     if let Some(night) = variant_to_kgx_livery(&value, false) {
                         livery.selector[0] = night;
-                        println!("found night theme")
                     }
                 }
 
                 if let Ok(Some(value)) = dict.lookup::<VariantDict>("day") {
                     if let Some(day) = variant_to_kgx_livery(&value, true) {
                         livery.selector[1] = day;
-                        println!("found day theme")
                     }
                 }
             }
