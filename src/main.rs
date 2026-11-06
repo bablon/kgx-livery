@@ -34,16 +34,7 @@ use gtk::{
     FileDialog, CssProvider,
 };
 
-const STYLE_NIGHT: KgxLivery = KgxLivery {
-    color: [
-        RGBA::new(0.651, 0.680, 0.631, 1.0),
-        RGBA::new(0.0, 0.0, 0.0, 1.0),
-
-        RGBA::new(0.537, 0.863, 0.922, 1.0),
-        RGBA::new(0.000, 0.212, 0.212, 1.0)
-    ],
-
-    palette: [
+const PALETTE_COLOR: [RGBA; 16] = [
         RGBA::new(0.141, 0.122, 0.192, 1.0),
         RGBA::new(0.753, 0.110, 0.157, 1.0),
         RGBA::new(0.180, 0.761, 0.494, 1.0),
@@ -60,7 +51,18 @@ const STYLE_NIGHT: KgxLivery = KgxLivery {
         RGBA::new(0.753, 0.380, 0.796, 1.0),
         RGBA::new(0.310, 0.824, 0.992, 1.0),
         RGBA::new(0.965, 0.961, 0.957, 1.0)
-    ]
+];
+
+const STYLE_NIGHT: KgxLivery = KgxLivery {
+    color: [
+        RGBA::new(0.651, 0.680, 0.631, 1.0),
+        RGBA::new(0.0, 0.0, 0.0, 1.0),
+
+        RGBA::new(0.537, 0.863, 0.922, 1.0),
+        RGBA::new(0.000, 0.212, 0.212, 1.0)
+    ],
+
+    palette: PALETTE_COLOR,
 };
 
 const STYLE_DAY: KgxLivery = KgxLivery {
@@ -72,24 +74,7 @@ const STYLE_DAY: KgxLivery = KgxLivery {
         RGBA::new(0.922, 0.925, 0.922, 1.0)
     ],
 
-    palette: [
-        RGBA::new(0.141, 0.122, 0.192, 1.0),
-        RGBA::new(0.753, 0.110, 0.157, 1.0),
-        RGBA::new(0.180, 0.761, 0.494, 1.0),
-        RGBA::new(0.961, 0.761, 0.067, 1.0),
-        RGBA::new(0.118, 0.471, 0.894, 1.0),
-        RGBA::new(0.596, 0.255, 0.733, 1.0),
-        RGBA::new(0.039, 0.725, 0.863, 1.0),
-        RGBA::new(0.753, 0.749, 0.737, 1.0),
-        RGBA::new(0.369, 0.361, 0.392, 1.0),
-        RGBA::new(0.929, 0.200, 0.231, 1.0),
-        RGBA::new(0.341, 0.890, 0.537, 1.0),
-        RGBA::new(0.973, 0.894, 0.361, 1.0),
-        RGBA::new(0.318, 0.631, 1.000, 1.0),
-        RGBA::new(0.753, 0.380, 0.796, 1.0),
-        RGBA::new(0.310, 0.824, 0.992, 1.0),
-        RGBA::new(0.965, 0.961, 0.957, 1.0)
-    ]
+    palette: PALETTE_COLOR,
 };
 
 struct KgxLivery {
