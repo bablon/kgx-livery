@@ -1,0 +1,63 @@
+name: Release kgx-livery
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-appimage:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libglib2.0-dev libpango1.0-dev gnome-icon-theme
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Download linuxdeploy
+        run: |
+
+          [ ! -e linuxdeploy-x86_64.AppImage ] && \
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+
+          chmod +x linuxdeploy-x86_64.AppImage
+          sudo mv linuxdeploy-x86_64.AppImage /usr/local/bin/linuxdeploy
+
+      - name: Build Rust binary
+        run: cargo build --release
+
+      - name: Package with linuxdeploy
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          mkdir -p AppDir/usr/bin
+
+          cp target/release/kgx-livery AppDir/usr/bin/
+
+          echo "[Desktop Entry]" > kgx-livery.desktop
+          echo "Name=kgx-livery" >> kgx-livery.desktop
+          echo "Exec=kgx-livery" >> kgx-livery.desktop
+          echo "Icon=system-run" >> kgx-livery.desktop
+          echo "Type=Application" >> kgx-livery.desktop
+          echo "Categories=Utility;" >> kgx-livery.desktop
+          echo "Terminal=false" >> kgx-livery.desktop
+
+          linuxdeploy \
+            --appdir=AppDir \
+            --desktop-file=kgx-livery.desktop \
+            --icon-file=/usr/share/icons/gnome/256x256/actions/system-run.png \
+            --output=appimage
+
+          mv kgx-livery-x86_64.AppImage kgx-livery-${GITHUB_REF_NAME#v}-x86_64.AppImage
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: kgx-livery*.AppImage
+          draft: true
